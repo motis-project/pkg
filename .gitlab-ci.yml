@@ -23,7 +23,6 @@ windows-release:
     - set WD=%cd%
     - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
     - cd %WD%
-    - set BOOST_ROOT=C:\boost_1_70_0
     - mkdir build
     - cd build
     - cmake -GNinja -DCMAKE_BUILD_TYPE=MinSizeRel ..
