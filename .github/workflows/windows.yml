@@ -19,10 +19,10 @@ jobs:
     - uses: microsoft/setup-msbuild@v1.0.0
 
     - name: CMake
-      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build --config Release
+      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
 
     - name: Build
-      run: cmake --build build
+      run: cmake --build build --config Release
 
     - name: Create Release
       id: create_release
