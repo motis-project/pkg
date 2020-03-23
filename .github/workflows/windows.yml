@@ -11,7 +11,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
+
     - uses: actions/checkout@v2
+      with:
+        submodules: true
+  
     - uses: microsoft/setup-msbuild@v1.0.0
 
     - name: CMake
