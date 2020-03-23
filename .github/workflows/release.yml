@@ -80,7 +80,7 @@ jobs:
           submodules: true
 
       - name: CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=MinSizeRel
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=MinSizeRel
 
       - name: Build
         run: cmake --build build
