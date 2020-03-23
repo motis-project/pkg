@@ -42,6 +42,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build\Release\utl-test.exe
-        asset_name: utl-test.exe
+        asset_path: build\Release\pkg.exe
+        asset_name: pkg.exe
         asset_content_type: application/octet-stream
