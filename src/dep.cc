@@ -36,7 +36,6 @@ dep dep::root(boost::filesystem::path const& root_repo) {
   dep d;
   d.path_ = root_repo;
   d.url_ = ROOT;
-  d.commit_ = get_commit(root_repo);
   d.branch_ = ROOT;
   return d;
 }
