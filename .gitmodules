@@ -1,6 +1,6 @@
 [submodule "deps/fmt"]
 	path = deps/fmt
-	url = git@git.motis-project.de:lib/fmt.git
+	url = git@github.com:motis-project/fmt.git
 [submodule "deps/utl"]
 	path = deps/utl
-	url = git@git.motis-project.de:lib/utl.git
+	url = git@github.com:motis-project/utl.git
