@@ -19,7 +19,7 @@ jobs:
     - uses: microsoft/setup-msbuild@v1.0.0
 
     - name: CMake
-      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build -DCMAKE_BUILD_TYPE=Release
+      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build --config Release
 
     - name: Build
       run: cmake --build build
