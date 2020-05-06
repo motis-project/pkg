@@ -59,7 +59,7 @@ auto const pkg_file_2 = std::string{R"(
 )"};
 
 TEST_CASE("load_deps") {
-  auto const check_deps = std::vector<dep>{{
+  auto const check_deps = std::set<dep>{{
       dep{"./deps", "git@git.net/pugi.git",
           "8153c7e9a52b9a64397737625d845fa7aec9e117", "master"},
       dep{"./deps", "git@git.net/net.git",
