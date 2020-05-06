@@ -12,10 +12,13 @@
 
 #include "fmt/format.h"
 
+#include "utl/to_set.h"
+
 #include "pkg/dependency_loader.h"
 #include "pkg/detect_branch.h"
 #include "pkg/exec.h"
 #include "pkg/git.h"
+#include "pkg/read_deps.h"
 
 namespace fs = boost::filesystem;
 
@@ -27,51 +30,32 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     boost::filesystem::create_directories(deps_root);
   }
 
-  dependency_loader l{deps_root};
-  l.retrieve(repo, [&](dep* d, branch_commit const& bc) {
+  bool checkout = false;
+  auto const iterator = [&](dep* d, branch_commit const& bc) {
     if (fs::is_directory(d->path_)) {
-      auto const current_commit = get_commit(d->path_);
-      if (bc.commit_ == current_commit) {
-        return;
-      }
-
       executor e;
       try {
-        fmt::print("{} already cloned: current={}, previous={}, required={}",
-                   d->name(), git_shorten(d, current_commit),
-                   git_shorten(d, d->commit_), git_shorten(d, bc.commit_));
-        std::cout << std::flush;
-
+        // Fetch if commit is not known.
         if (!commit_exists(d, d->commit_) || !commit_exists(d, bc.commit_)) {
-          fmt::print(" ... fetch.");
+          fmt::print("{}: fetch\n", d->name());
           std::cout << std::flush;
           e.exec(d->path_, "git fetch origin");
         }
 
+        // Select latest known commit.
         if (commit_time(d, d->commit_) < commit_time(d, bc.commit_)) {
           d->commit_ = bc.commit_;
           d->branch_ = bc.branch_;
-        } else {
-          fmt::print(" ... required > previous.");
-          std::cout << std::flush;
         }
-
-        if (current_commit != d->commit_) {
-          fmt::print(" ... checkout {}.", git_shorten(d, d->commit_));
-          std::cout << std::flush;
-          git_attach(e, d, force);
-        }
-
-        std::cout << std::endl;
       } catch (std::exception const& ex) {
-        fmt::print("Checkout failed for {}: {}\n", d->name(), ex.what());
+        fmt::print("Rev-Update failed for {}: {}\n", d->name(), ex.what());
         e.print_trace();
       }
     } else {
       fmt::print("cloning: {}\n", d->name());
       std::cout << std::flush;
 
-      std::function<void(int)> clone = [&](int i) {
+      std::function<void(int)> clone_retry = [&](int i) {
         executor e;
         try {
           git_clone(e, d, clone_https);
@@ -81,14 +65,49 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
 
           std::cout << "Retry clone\n";
           if (i != 0) {
-            clone(i - 1);
+            clone_retry(i - 1);
           }
         }
       };
 
-      clone(2);
+      clone_retry(2);
     }
-  });
+  };
+
+  dependency_loader l{deps_root};
+
+  bool repeat = true;
+  do {
+    repeat = false;
+    l.retrieve(repo, iterator);
+    for (auto const& d : l.get_all()) {
+      if (d->url_ == ROOT) {
+        continue;
+      }
+      if (d->commit_ != get_commit(d->path_)) {
+        executor ex;
+        try {
+          git_attach(ex, d, force);
+          fmt::print("{}: checkout {}\n", d->name(),
+                     git_shorten(d, d->commit_));
+
+          if (utl::to_set(read_deps(deps_root, d), [&](dep const& new_d) {
+                auto const resolved = l.resolve(new_d.url_);
+                return std::make_tuple(resolved->url_, resolved->branch_,
+                                       resolved->commit_);
+              }) != utl::to_set(d->succs_, [&](dep const* old_d) {
+                return std::make_tuple(old_d->url_, old_d->branch_,
+                                       old_d->commit_);
+              })) {
+            repeat = true;
+          }
+        } catch (std::exception const& e) {
+          fmt::print("Checkout failed for {}: {}\n", d->name(), e.what());
+          ex.print_trace();
+        }
+      }
+    }
+  } while (repeat);
 
   std::ofstream of{"deps/CMakeLists.txt"};
   of << "project(" + deps_root.string() << ")\n"

@@ -48,17 +48,23 @@ void git_attach(executor& e, dep const* d, bool const force) {
     return;
   }
 
-  e.exec(d->path_, "git fetch origin");
-  auto const branch_head_commit =
-      get_commit(e, d->path_, "origin/" + d->branch_);
-  if (branch_head_commit == d->commit_) {
-    force ? e.exec(d->path_, "git reset --hard {}", d->branch_)
-          : e.exec(d->path_, "git checkout {}", d->branch_);
-    e.exec(d->path_, "git pull");
-  } else {
-    force ? e.exec(d->path_, "git reset --hard {}", d->branch_)
-          : e.exec(d->path_, "git checkout {}", d->branch_);
+  if (!commit_exists(d, d->commit_)) {
+    e.exec(d->path_, "git fetch origin");
+    e.exec(d->path_, "git checkout -B {} origin/{}", d->branch_, d->branch_);
   }
+
+  std::string branch_head_commit;
+  try {
+    branch_head_commit = get_commit(e, d->path_, d->branch_);
+  } catch (std::exception const& e) {
+    fmt::print("warning: unknown branch {} for dependency {}\n", d->branch_,
+               d->name());
+    std::cout << std::flush;
+  }
+  auto const is_branch_head = branch_head_commit == d->commit_;
+  auto const ref = is_branch_head ? d->branch_ : d->commit_;
+  force ? e.exec(d->path_, "git reset --hard {}", ref)
+        : e.exec(d->path_, "git checkout {}", ref);
 }
 
 void git_clone(executor& e, dep const* d, bool const to_https) {

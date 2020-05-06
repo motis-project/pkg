@@ -28,6 +28,10 @@ dependency_loader::~dependency_loader() = default;
 
 dep* dependency_loader::root() { return deps_.at(ROOT); }
 
+dep* dependency_loader::resolve(std::string const& url) const {
+  return deps_.at(url);
+}
+
 std::vector<dep*> dependency_loader::sorted() {
   auto written = std::set<dep*>{};
   auto sorted = std::vector<dep*>{};

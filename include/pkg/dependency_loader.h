@@ -29,6 +29,7 @@ public:
   dep* root();
   std::vector<dep*> sorted();
   std::vector<dep*> get_all() const;
+  dep* resolve(std::string const& url) const;
 
 private:
   void retrieve(dep* pred, iteration_fn_t const&);

@@ -8,14 +8,14 @@
 #include "boost/property_tree/ini_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
 
-#include "utl/to_vec.h"
+#include "utl/to_set.h"
 
 namespace fs = boost::filesystem;
 
 namespace pkg {
 
-std::vector<dep> read_deps(fs::path const& deps_root,
-                           std::string const& file_content) {
+std::set<dep> read_deps(fs::path const& deps_root,
+                        std::string const& file_content) {
   namespace pt = boost::property_tree;
 
   std::stringstream ss;
@@ -23,7 +23,7 @@ std::vector<dep> read_deps(fs::path const& deps_root,
 
   pt::ptree tree;
   pt::read_ini(ss, tree);
-  return utl::to_vec(tree, [&](auto const& entry) {
+  return utl::to_set(tree, [&](auto const& entry) {
     auto const& settings = entry.second;
     return dep{deps_root,
                settings.template get<std::string>(pt::path{"url"}, ""),
@@ -45,13 +45,12 @@ std::optional<std::string> read_file(fs::path const& path) {
   return f.read(&buffer[0], size) ? std::make_optional(buffer) : std::nullopt;
 }
 
-std::vector<dep> read_deps(fs::path const& deps_root, dep const* d) {
+std::set<dep> read_deps(fs::path const& deps_root, dep const* d) {
   if (auto const p = d->path_ / PKG_FILE; !fs::is_regular_file(p)) {
     return {};
   } else {
     auto const file_content = read_file(p);
-    return file_content ? read_deps(deps_root, *file_content)
-                        : std::vector<dep>{};
+    return file_content ? read_deps(deps_root, *file_content) : std::set<dep>{};
   }
 }
 
