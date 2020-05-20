@@ -28,8 +28,12 @@ dependency_loader::~dependency_loader() = default;
 
 dep* dependency_loader::root() { return deps_.at(ROOT); }
 
-dep* dependency_loader::resolve(std::string const& url) const {
-  return deps_.at(url);
+std::optional<dep*> dependency_loader::resolve(std::string const& url) const {
+  if (auto it = deps_.find(url); it == end(deps_)) {
+    return std::nullopt;
+  } else {
+    return std::make_optional(it->second);
+  }
 }
 
 std::vector<dep*> dependency_loader::sorted() {
