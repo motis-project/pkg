@@ -1,0 +1,121 @@
+name: Unix Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Format files
+        run: find include src test -type f -not -name "doctest.h" -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
+
+      - name: Check for differences
+        run: |
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+  build:
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - name: Mac OS X Release
+            cxx: clang++
+            cc: clang
+            mode: Release
+            os: macos-latest
+            postfix: osx
+          - name: GCC 7 Release
+            cxx: g++-7
+            cc: gcc-7
+            mode: Release
+            os: ubuntu-latest
+    env:
+      BOOST_ROOT: /usr/local/share/boost/1.72.0
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      # ==== BOOST FOR MAC OS ====
+      - name: Boost Cache
+        uses: actions/cache@v1
+        id: libcxxboostcache
+        if: matrix.config.os == 'macos-latest'
+        with:
+          path: boost_1_72_0
+          key: boost_1_72_0-${{ matrix.config.os }}
+
+      - name: Boost for libc++
+        if: matrix.config.os == 'macos-latest' && steps.libcxxboostcache.outputs.cache-hit != 'true'
+        run: |
+          echo "using clang : 9 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
+          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
+          tar xf boost_1_72_0.tar.bz2
+          cd boost_1_72_0
+          ./bootstrap.sh
+          ./b2 -j6 \
+            link=static threading=multi variant=release \
+            toolset=clang-9 cxxflags="-stdlib=libc++" \
+            --with-system \
+            --with-filesystem \
+            --with-iostreams \
+            --with-program_options \
+            --with-thread \
+            --with-date_time \
+            --with-regex \
+            --with-serialization \
+            -s NO_BZIP2=1
+
+      - name: Set BOOST_ROOT
+        if: matrix.config.os == 'macos-latest'
+        run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0"
+
+      # ==== BUILD ====
+      - name: CMake
+        run: |
+          cmake \
+            -G Ninja -S . -B build \
+            -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
+
+      - name: Build
+        run: cmake --build build --target pkg pkg-test
+
+      - name: Run Tests
+        run: ./build/pkg-test
+
+      # ==== DISTRIBUTION ====
+      - name: Strip Executable
+        run: strip build/pkg
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@v1
+        with:
+          name: pkg
+          path: ./build/pkg
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg${{ matrix.config.postfix }}
+          asset_content_type: application/x-tar
