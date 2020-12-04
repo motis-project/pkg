@@ -25,7 +25,8 @@ public:
 
   void retrieve(
       boost::filesystem::path const&,
-      iteration_fn_t const& = [](dep*, branch_commit const&) {});
+      iteration_fn_t const& = [](dep*, branch_commit const&) {},
+      bool recursive = false);
 
   dep* root();
   std::vector<dep*> sorted();

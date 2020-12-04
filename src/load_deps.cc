@@ -25,7 +25,7 @@ namespace fs = boost::filesystem;
 namespace pkg {
 
 void load_deps(fs::path const& repo, fs::path const& deps_root,
-               bool const clone_https, bool const force) {
+               bool const clone_https, bool const force, bool const recursive) {
   if (!boost::filesystem::is_directory(deps_root)) {
     boost::filesystem::create_directories(deps_root);
   }
@@ -78,7 +78,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   auto repeat = false;
   do {
     repeat = false;
-    l.retrieve(repo, iterator);
+    l.retrieve(repo, iterator, recursive);
     for (auto const& d : l.get_all()) {
       if (d->url_ == ROOT || d->commit_ == get_commit(d->path_)) {
         continue;

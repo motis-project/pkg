@@ -63,11 +63,34 @@ std::vector<dep*> dependency_loader::get_all() const {
 }
 
 void dependency_loader::retrieve(
-    fs::path const& p, dependency_loader::iteration_fn_t const& iterate) {
+    fs::path const& p, dependency_loader::iteration_fn_t const& iterate,
+    const bool recursive) {
   deps_.clear();
   dep_mem_.clear();
   auto& d = dep_mem_.emplace_back(std::make_unique<dep>(dep::root(p)));
   retrieve(deps_[ROOT] = d.get(), iterate);
+
+  if (recursive && fs::is_directory(p)) {
+    fs::recursive_directory_iterator it(p);
+    fs::recursive_directory_iterator endIt;
+    while (it != endIt) {
+      {
+        auto path_as_string = it->path().string();
+        if (path_as_string.find(".git") != std::string::npos ||
+            path_as_string.find("./deps") != std::string::npos) {
+          ++it;
+          continue;
+        }
+      }
+
+      if (fs::is_regular_file(*it) && it->path().filename() == PKG_FILE) {
+        auto path = it->path().parent_path();
+        auto& d = dep_mem_.emplace_back(std::make_unique<dep>(dep::root(path)));
+        retrieve(deps_[path.string()] = d.get(), iterate);
+      }
+      ++it;
+    }
+  }
 }
 
 void dependency_loader::retrieve(

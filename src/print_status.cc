@@ -24,8 +24,8 @@ void print_status(std::vector<dep*> const& all) {
     if (s.commited_change_ || s.recursive_change_) {
       auto const color = s.commited_change_ && s.recursive_change_
                              ? fmt::terminal_color::magenta
-                             : s.commited_change_ ? fmt::terminal_color::red
-                                                  : fmt::terminal_color::blue;
+                         : s.commited_change_ ? fmt::terminal_color::red
+                                              : fmt::terminal_color::blue;
       fmt::print(fg(color), "{:>{}}{}", name, indent * 2 + name.length(),
                  s.uncommited_change_ ? "*" : "");
     } else {
