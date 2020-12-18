@@ -1,0 +1,4 @@
+[pugixml]
+  url=git@git.net/pugi.git
+  branch=master
+  commit=8153c7e9a52b9a64397737625d845fa7aec9e117

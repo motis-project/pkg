@@ -15,7 +15,6 @@
 #include "utl/to_set.h"
 
 #include "pkg/dependency_loader.h"
-#include "pkg/detect_branch.h"
 #include "pkg/exec.h"
 #include "pkg/git.h"
 #include "pkg/read_deps.h"
@@ -30,7 +29,6 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     boost::filesystem::create_directories(deps_root);
   }
 
-  bool checkout = false;
   auto const iterator = [&](dep* d, branch_commit const& bc) {
     if (fs::is_directory(d->path_)) {
       executor e;

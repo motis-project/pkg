@@ -34,7 +34,7 @@ public:
   std::optional<dep*> resolve(std::string const& url) const;
 
 private:
-  void retrieve(dep* pred, iteration_fn_t const&);
+  void retrieve(dep* pred, iteration_fn_t const&, bool recursive);
 
   boost::filesystem::path deps_root_;
   std::map<std::string, dep*> deps_;

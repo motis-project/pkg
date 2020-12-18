@@ -5,7 +5,6 @@
 #include "boost/filesystem/operations.hpp"
 
 #include "pkg/dependency_loader.h"
-#include "pkg/detect_branch.h"
 #include "pkg/get_home_path.h"
 #include "pkg/load_deps.h"
 #include "pkg/print_status.h"
