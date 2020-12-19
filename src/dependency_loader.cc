@@ -1,15 +1,7 @@
 #include "pkg/dependency_loader.h"
 
-#include <cstdio>
-#include <iostream>
 #include <set>
-#include <sstream>
 
-#include "boost/filesystem.hpp"
-
-#include "fmt/format.h"
-
-#include "utl/erase.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -63,16 +55,18 @@ std::vector<dep*> dependency_loader::get_all() const {
 }
 
 void dependency_loader::retrieve(
-    fs::path const& p, dependency_loader::iteration_fn_t const& iterate) {
+    fs::path const& p, dependency_loader::iteration_fn_t const& iterate,
+    bool const recursive) {
   deps_.clear();
   dep_mem_.clear();
   auto& d = dep_mem_.emplace_back(std::make_unique<dep>(dep::root(p)));
-  retrieve(deps_[ROOT] = d.get(), iterate);
+  retrieve(deps_[ROOT] = d.get(), iterate, recursive);
 }
 
 void dependency_loader::retrieve(
-    dep* pred, dependency_loader::iteration_fn_t const& iterate) {
-  for (auto const& d : read_deps(deps_root_, pred)) {
+    dep* pred, dependency_loader::iteration_fn_t const& iterate,
+    bool const recursive) {
+  for (auto const& d : read_deps(deps_root_, pred, recursive)) {
     auto succ = utl::get_or_create(deps_, d.url_, [&]() {
       return dep_mem_.emplace_back(std::make_unique<dep>(d)).get();
     });
@@ -84,7 +78,7 @@ void dependency_loader::retrieve(
     pred->succs_.insert(succ);
 
     iterate(succ, bc);
-    retrieve(succ, iterate);
+    retrieve(succ, iterate, recursive);
   }
 }
 

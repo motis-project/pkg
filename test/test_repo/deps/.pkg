@@ -1,0 +1,4 @@
+[abc]
+  url=git@git.net/abc.git
+  branch=pkg
+  commit=494d1527d81ba286f18f1d0e4a7fefb580e49af4

@@ -39,7 +39,6 @@ jobs:
             mode: Release
             os: ubuntu-latest
     env:
-      BOOST_ROOT: /usr/local/share/boost/1.72.0
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
@@ -79,9 +78,13 @@ jobs:
             --with-serialization \
             -s NO_BZIP2=1
 
-      - name: Set BOOST_ROOT
+      - name: Set BOOST_ROOT for Mac OS X
         if: matrix.config.os == 'macos-latest'
-        run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0"
+        run: echo "BOOST_ROOT=`pwd`/boost_1_72_0" >> $GITHUB_ENV
+
+      - name: Set BOOST_ROOT for Linux
+        if: matrix.config.cxx == 'g++-7'
+        run: echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
 
       # ==== BUILD ====
       - name: CMake

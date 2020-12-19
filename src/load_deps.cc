@@ -15,7 +15,6 @@
 #include "utl/to_set.h"
 
 #include "pkg/dependency_loader.h"
-#include "pkg/detect_branch.h"
 #include "pkg/exec.h"
 #include "pkg/git.h"
 #include "pkg/read_deps.h"
@@ -25,12 +24,11 @@ namespace fs = boost::filesystem;
 namespace pkg {
 
 void load_deps(fs::path const& repo, fs::path const& deps_root,
-               bool const clone_https, bool const force) {
+               bool const clone_https, bool const force, bool const recursive) {
   if (!boost::filesystem::is_directory(deps_root)) {
     boost::filesystem::create_directories(deps_root);
   }
 
-  bool checkout = false;
   auto const iterator = [&](dep* d, branch_commit const& bc) {
     if (fs::is_directory(d->path_)) {
       executor e;
@@ -78,7 +76,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   auto repeat = false;
   do {
     repeat = false;
-    l.retrieve(repo, iterator);
+    l.retrieve(repo, iterator, recursive);
     for (auto const& d : l.get_all()) {
       if (d->url_ == ROOT || d->commit_ == get_commit(d->path_)) {
         continue;

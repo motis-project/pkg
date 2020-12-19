@@ -41,8 +41,12 @@ add_executable(pkg src/main.cc)
 target_link_libraries(pkg pkglib)
 set_property(TARGET pkg PROPERTY CXX_STANDARD 17)
 
-
+configure_file (
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
+  ${CMAKE_BINARY_DIR}/generated/test_dir.h
+)
 file(GLOB_RECURSE pkg-test-files test/*_test.cc)
 add_executable(pkg-test EXCLUDE_FROM_ALL src/read_deps.cc ${pkg-test-files})
+target_include_directories(pkg-test PRIVATE ${CMAKE_BINARY_DIR}/generated)
 target_link_libraries(pkg-test pkglib)
 set_property(TARGET pkg-test PROPERTY CXX_STANDARD 17)

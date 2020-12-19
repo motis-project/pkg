@@ -25,7 +25,8 @@ public:
 
   void retrieve(
       boost::filesystem::path const&,
-      iteration_fn_t const& = [](dep*, branch_commit const&) {});
+      iteration_fn_t const& = [](dep*, branch_commit const&) {},
+      bool recursive = false);
 
   dep* root();
   std::vector<dep*> sorted();
@@ -33,7 +34,7 @@ public:
   std::optional<dep*> resolve(std::string const& url) const;
 
 private:
-  void retrieve(dep* pred, iteration_fn_t const&);
+  void retrieve(dep* pred, iteration_fn_t const&, bool recursive);
 
   boost::filesystem::path deps_root_;
   std::map<std::string, dep*> deps_;

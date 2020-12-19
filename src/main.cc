@@ -5,7 +5,6 @@
 #include "boost/filesystem/operations.hpp"
 
 #include "pkg/dependency_loader.h"
-#include "pkg/detect_branch.h"
 #include "pkg/get_home_path.h"
 #include "pkg/load_deps.h"
 #include "pkg/print_status.h"
@@ -23,6 +22,7 @@ int main(int argc, char** argv) {
         "  -l [-h]   load    [clone dependencies\n"
         "                     -h for https (default: ssh);\n"
         "                     -f for hard reset (default: checkout)]\n"
+        "                     -r for recursive (default: false)]\n"
         "  -u        update  [recursive on new commit]\n"
         "  -s        status  [print status]\n"
         "  -r        resolve [resolve conflicts]\n"
@@ -38,7 +38,8 @@ int main(int argc, char** argv) {
     } else if (std::strcmp(argv[1], "-l") == 0) {
       load_deps(fs::path{"."}, fs::path("deps"),
                 argc > 2 && std::strcmp(argv[2], "-h") == 0,
-                argc > 3 && std::strcmp(argv[3], "-f") == 0);
+                argc > 3 && std::strcmp(argv[3], "-f") == 0,
+                argc > 4 && std::strcmp(argv[4], "-r") == 0);
     } else if (std::strcmp(argv[1], "-s") == 0) {
       print_status(fs::path{"."}, fs::path("deps"));
     } else if (std::strcmp(argv[1], "-r") == 0) {
