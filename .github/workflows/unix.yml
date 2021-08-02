@@ -33,9 +33,9 @@ jobs:
             mode: Release
             os: macos-latest
             postfix: osx
-          - name: GCC 7 Release
-            cxx: g++-7
-            cc: gcc-7
+          - name: GCC 9 Release
+            cxx: g++-9
+            cc: gcc-9
             mode: Release
             os: ubuntu-latest
     env:
@@ -83,7 +83,7 @@ jobs:
         run: echo "BOOST_ROOT=`pwd`/boost_1_72_0" >> $GITHUB_ENV
 
       - name: Set BOOST_ROOT for Linux
-        if: matrix.config.cxx == 'g++-7'
+        if: matrix.config.cxx == 'g++-9'
         run: echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
 
       # ==== BUILD ====
