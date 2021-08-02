@@ -28,15 +28,21 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: Mac OS X Release
+          - name: macOS Release
             cxx: clang++
             cc: clang
+            toolset: clang
+            toolset-version: 12
+            cxxflags: "-stdlib=libc++"
             mode: Release
             os: macos-latest
             postfix: osx
           - name: GCC 9 Release
             cxx: g++-9
             cc: gcc-9
+            toolset: gcc
+            toolset-version: 9
+            cxxflags: ""
             mode: Release
             os: ubuntu-latest
     env:
@@ -49,26 +55,26 @@ jobs:
         with:
           submodules: true
 
-      # ==== BOOST FOR MAC OS ====
+      # ==== BOOST ====
       - name: Boost Cache
         uses: actions/cache@v1
-        id: libcxxboostcache
-        if: matrix.config.os == 'macos-latest'
+        id: boostcache
         with:
           path: boost_1_76_0
-          key: boost_1_76_0-${{ matrix.config.os }}
+          key: boost_1_76_0-${{ matrix.config.os }}-${{ matrix.config.toolset }}-${{ matrix.config.toolset-version }}
 
-      - name: Boost for libc++
-        if: matrix.config.os == 'macos-latest' && steps.libcxxboostcache.outputs.cache-hit != 'true'
+      - name: Boost
+        if: steps.boostcache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 12 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
+          echo "using ${{ matrix.config.toolset }} : ${{ matrix.config.toolset-version }} : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
           wget https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.bz2
           tar xf boost_1_76_0.tar.bz2
           cd boost_1_76_0
           ./bootstrap.sh
           ./b2 -j6 \
             link=static threading=multi variant=release \
-            toolset=clang-12 cxxflags="-stdlib=libc++" \
+            toolset=${{ matrix.config.toolset }}-${{ matrix.config.toolset-version }} \
+            cxxflags="${{ matrix.config.cxxflags }}" \
             --with-system \
             --with-filesystem \
             --with-iostreams \
@@ -79,13 +85,8 @@ jobs:
             --with-serialization \
             -s NO_BZIP2=1
 
-      - name: Set BOOST_ROOT for Mac OS X
-        if: matrix.config.os == 'macos-latest'
+      - name: Set BOOST_ROOT
         run: echo "BOOST_ROOT=`pwd`/boost_1_76_0" >> $GITHUB_ENV
-
-      - name: Set BOOST_ROOT for Linux
-        if: matrix.config.cxx == 'g++-9'
-        run: echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
 
       # ==== BUILD ====
       - name: CMake
@@ -94,6 +95,7 @@ jobs:
             -S . -B build \
             -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+            -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
 
       - name: Build
