@@ -41,20 +41,20 @@ jobs:
       - name: Strip Executable
         run: strip build/pkg
 
-      - name: Upload Distribution (1)
+      - name: Upload Distribution
         uses: actions/upload-artifact@v2
         with:
           name: pkg-macos-amd64
           path: ./build/pkg
 
-      - name: Upload Distribution (2)
+      - name: Upload Distribution (Legacy Naming)
         uses: actions/upload-artifact@v2
         with:
           name: pkgosx
           path: ./build/pkg
 
       # ==== RELEASE ====
-      - name: Upload Release (1)
+      - name: Upload Release
         if: github.event.action == 'published'
         uses: actions/upload-release-asset@v1.0.2
         env:
@@ -65,7 +65,7 @@ jobs:
           asset_name: pkg-macos-amd64
           asset_content_type: application/x-tar
 
-      - name: Upload Release (2)
+      - name: Upload Release (Legacy Naming)
         if: github.event.action == 'published'
         uses: actions/upload-release-asset@v1.0.2
         env:
