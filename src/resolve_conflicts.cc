@@ -28,8 +28,9 @@ void resolve_conflict(dep* d) {
   auto i = 0U;
   for (auto const& info : infos) {
     auto const ff = is_fast_forward(d->path_, info.bc_.commit_, latest.commit_);
-    fmt::print("  {} ",
-               i == 0U ? "            " : ff ? "FAST-FORWARD" : "ERROR       ");
+    fmt::print("  {} ", i == 0U ? "            "
+                        : ff    ? "FAST-FORWARD"
+                                : "ERROR       ");
 
     fmt::print(" {} on {} ({}) referenced by ", info.bc_.commit_,
                info.bc_.branch_, info.info_);
