@@ -128,12 +128,12 @@ jobs:
     container:
       image: alpine:3.14
     steps:
+      - name: Install packages
+        run: apk add git build-base cmake ninja linux-headers boost1.76-dev boost1.76-static
+
       - uses: actions/checkout@v2
         with:
           submodules: true
-
-      - name: Install packages
-        run: apk add build-base cmake ninja linux-headers boost1.76-dev boost1.76-static
 
       - name: CMake
         run: |
