@@ -122,3 +122,39 @@ jobs:
           asset_path: ./build/pkg
           asset_name: pkg${{ matrix.config.postfix }}
           asset_content_type: application/x-tar
+
+  static-build:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.14
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install packages
+        run: apk add build-base cmake ninja linux-headers boost1.76-dev boost1.76-static
+
+      - name: CMake
+        run: |
+          cmake \
+            -S . -B build \
+            -G Ninja \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --target pkg pkg-test
+
+      - name: Run Tests
+        run: ./build/pkg-test
+
+      # ==== DISTRIBUTION ====
+      - name: Strip Executable
+        run: strip build/pkg
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@v1
+        with:
+          name: pkg-linux-amd64-static
+          path: ./build/pkg
