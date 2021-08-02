@@ -5,19 +5,10 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 find_package(Threads)
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-if (MSVC)
-  add_definitions(/D_WIN32_WINNT=0x0601)
-  set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-find_package(Boost COMPONENTS system filesystem REQUIRED)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
-
 add_subdirectory(deps/utl EXCLUDE_FROM_ALL)
 add_subdirectory(deps/fmt EXCLUDE_FROM_ALL)
+add_subdirectory(deps/zlib EXCLUDE_FROM_ALL)
+add_subdirectory(deps/boost EXCLUDE_FROM_ALL)
 
 file(GLOB_RECURSE pkg-files src/*.cc)
 file(GLOB main-file src/main.cc)
@@ -27,9 +18,9 @@ target_include_directories(pkglib PUBLIC include)
 target_link_libraries(pkglib
   utl
   fmt
-  ${Boost_FILESYSTEM_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_PROPERTYTREE_LIBRARY}
+  boost
+  boost-filesystem
+  boost-system
   ${CMAKE_THREAD_LIBS_INIT}
 )
 if (MSVC)

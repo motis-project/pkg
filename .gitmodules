@@ -4,3 +4,9 @@
 [submodule "deps/utl"]
 	path = deps/utl
 	url = git@github.com:motis-project/utl.git
+[submodule "deps/boost"]
+	path = deps/boost
+	url = git@github.com:motis-project/boost.git
+[submodule "deps/zlib"]
+	path = deps/zlib
+	url = git@github.com:motis-project/zlib.git

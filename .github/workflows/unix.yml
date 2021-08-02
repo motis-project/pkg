@@ -55,39 +55,6 @@ jobs:
         with:
           submodules: true
 
-      # ==== BOOST ====
-      - name: Boost Cache
-        uses: actions/cache@v1
-        id: boostcache
-        with:
-          path: boost_1_76_0
-          key: boost_1_76_0-${{ matrix.config.os }}-${{ matrix.config.toolset }}-${{ matrix.config.toolset-version }}
-
-      - name: Boost
-        if: steps.boostcache.outputs.cache-hit != 'true'
-        run: |
-          echo "using ${{ matrix.config.toolset }} : ${{ matrix.config.toolset-version }} : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
-          wget https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.bz2
-          tar xf boost_1_76_0.tar.bz2
-          cd boost_1_76_0
-          ./bootstrap.sh
-          ./b2 -j6 \
-            link=static threading=multi variant=release \
-            toolset=${{ matrix.config.toolset }}-${{ matrix.config.toolset-version }} \
-            cxxflags="${{ matrix.config.cxxflags }}" \
-            --with-system \
-            --with-filesystem \
-            --with-iostreams \
-            --with-program_options \
-            --with-thread \
-            --with-date_time \
-            --with-regex \
-            --with-serialization \
-            -s NO_BZIP2=1
-
-      - name: Set BOOST_ROOT
-        run: echo "BOOST_ROOT=`pwd`/boost_1_76_0" >> $GITHUB_ENV
-
       # ==== BUILD ====
       - name: CMake
         run: |
@@ -132,7 +99,7 @@ jobs:
       image: alpine:3.14
     steps:
       - name: Install packages
-        run: apk add git build-base cmake ninja linux-headers boost1.76-dev boost1.76-static
+        run: apk add git build-base cmake ninja linux-headers
 
       - uses: actions/checkout@v2
         with:
@@ -161,3 +128,15 @@ jobs:
         with:
           name: pkg-linux-amd64-static
           path: ./build/pkg
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg-linux-amd64-static
+          asset_content_type: application/x-tar
