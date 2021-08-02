@@ -79,21 +79,21 @@ jobs:
 
       - name: Upload Distribution (1)
         uses: actions/upload-artifact@v2
-        if: matrix.config.artifact != ""
+        if: matrix.config.artifact != ''
         with:
           name: ${{ matrix.config.artifact }}
           path: ./build/pkg
 
       - name: Upload Distribution (2)
         uses: actions/upload-artifact@v2
-        if: matrix.config.postfix != ""
+        if: matrix.config.postfix != ''
         with:
           name: pkg${{ matrix.config.postfix }}
           path: ./build/pkg
 
       # ==== RELEASE ====
       - name: Upload Release (1)
-        if: github.event.action == 'published' && matrix.config.artifact != ""
+        if: github.event.action == 'published' && matrix.config.artifact != ''
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -104,7 +104,7 @@ jobs:
           asset_content_type: application/x-tar
 
       - name: Upload Release (2)
-        if: github.event.action == 'published' && matrix.config.postfix != ""
+        if: github.event.action == 'published' && matrix.config.postfix != ''
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
