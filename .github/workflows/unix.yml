@@ -54,20 +54,20 @@ jobs:
         id: libcxxboostcache
         if: matrix.config.os == 'macos-latest'
         with:
-          path: boost_1_72_0
-          key: boost_1_72_0-${{ matrix.config.os }}
+          path: boost_1_76_0
+          key: boost_1_76_0-${{ matrix.config.os }}
 
       - name: Boost for libc++
         if: matrix.config.os == 'macos-latest' && steps.libcxxboostcache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 9 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
-          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
-          tar xf boost_1_72_0.tar.bz2
-          cd boost_1_72_0
+          echo "using clang : 12 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
+          wget https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.bz2
+          tar xf boost_1_76_0.tar.bz2
+          cd boost_1_76_0
           ./bootstrap.sh
           ./b2 -j6 \
             link=static threading=multi variant=release \
-            toolset=clang-9 cxxflags="-stdlib=libc++" \
+            toolset=clang-12 cxxflags="-stdlib=libc++" \
             --with-system \
             --with-filesystem \
             --with-iostreams \
@@ -80,7 +80,7 @@ jobs:
 
       - name: Set BOOST_ROOT for Mac OS X
         if: matrix.config.os == 'macos-latest'
-        run: echo "BOOST_ROOT=`pwd`/boost_1_72_0" >> $GITHUB_ENV
+        run: echo "BOOST_ROOT=`pwd`/boost_1_76_0" >> $GITHUB_ENV
 
       - name: Set BOOST_ROOT for Linux
         if: matrix.config.cxx == 'g++-9'
