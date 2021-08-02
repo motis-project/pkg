@@ -1,0 +1,77 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      # ==== BUILD ====
+      - name: CMake
+        run: |
+          cmake \
+            -S . -B build \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --target pkg pkg-test
+
+      - name: Run Tests
+        run: ./build/pkg-test
+
+      # ==== DISTRIBUTION ====
+      - name: Strip Executable
+        run: strip build/pkg
+
+      - name: Upload Distribution (1)
+        uses: actions/upload-artifact@v2
+        with:
+          name: pkg-macos-amd64
+          path: ./build/pkg
+
+      - name: Upload Distribution (2)
+        uses: actions/upload-artifact@v2
+        with:
+          name: pkgosx
+          path: ./build/pkg
+
+      # ==== RELEASE ====
+      - name: Upload Release (1)
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg-macos-amd64
+          asset_content_type: application/x-tar
+
+      - name: Upload Release (2)
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkgosx
+          asset_content_type: application/x-tar

@@ -1,0 +1,89 @@
+name: Linux Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Format files
+        run: find include src test -type f -not -name "doctest.h" -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format -i
+
+      - name: Check for differences
+        run: |
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.14
+    steps:
+      - name: Install packages
+        run: apk add git build-base cmake ninja linux-headers
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: CMake
+        run: |
+          cmake \
+            -S . -B build \
+            -G Ninja \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --target pkg pkg-test
+
+      - name: Run Tests
+        run: ./build/pkg-test
+
+      # ==== DISTRIBUTION ====
+      - name: Strip Executable
+        run: strip build/pkg
+
+      - name: Upload Distribution (1)
+        uses: actions/upload-artifact@v2
+        with:
+          name: pkg-linux-amd64
+          path: ./build/pkg
+
+      - name: Upload Distribution (2)
+        uses: actions/upload-artifact@v2
+        with:
+          name: pkg
+          path: ./build/pkg
+
+      # ==== RELEASE ====
+      - name: Upload Release (1)
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg-linux-amd64
+          asset_content_type: application/x-tar
+
+      - name: Upload Release (2)
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg
+          asset_content_type: application/x-tar
