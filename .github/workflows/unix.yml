@@ -22,6 +22,7 @@ jobs:
         run: |
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
   build:
     runs-on: ${{ matrix.config.os }}
     strategy:
@@ -36,6 +37,7 @@ jobs:
             cxxflags: "-stdlib=libc++"
             mode: Release
             os: macos-latest
+            artifact: pkg-macos-amd64
             postfix: osx
           - name: GCC 9 Release
             cxx: g++-9
@@ -75,15 +77,34 @@ jobs:
       - name: Strip Executable
         run: strip build/pkg
 
-      - name: Upload Distribution
-        uses: actions/upload-artifact@v1
+      - name: Upload Distribution (1)
+        uses: actions/upload-artifact@v2
+        if: matrix.config.artifact != ""
+        with:
+          name: ${{ matrix.config.artifact }}
+          path: ./build/pkg
+
+      - name: Upload Distribution (2)
+        uses: actions/upload-artifact@v2
+        if: matrix.config.postfix != ""
         with:
           name: pkg${{ matrix.config.postfix }}
           path: ./build/pkg
 
       # ==== RELEASE ====
-      - name: Upload Release
-        if: github.event.action == 'published'
+      - name: Upload Release (1)
+        if: github.event.action == 'published' && matrix.config.artifact != ""
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: ${{ matrix.config.artifact }}
+          asset_content_type: application/x-tar
+
+      - name: Upload Release (2)
+        if: github.event.action == 'published' && matrix.config.postfix != ""
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,14 +144,20 @@ jobs:
       - name: Strip Executable
         run: strip build/pkg
 
-      - name: Upload Distribution
-        uses: actions/upload-artifact@v1
+      - name: Upload Distribution (1)
+        uses: actions/upload-artifact@v2
         with:
-          name: pkg-linux-amd64-static
+          name: pkg-linux-amd64
+          path: ./build/pkg
+
+      - name: Upload Distribution (2)
+        uses: actions/upload-artifact@v2
+        with:
+          name: pkg
           path: ./build/pkg
 
       # ==== RELEASE ====
-      - name: Upload Release
+      - name: Upload Release (1)
         if: github.event.action == 'published'
         uses: actions/upload-release-asset@v1.0.2
         env:
@@ -138,5 +165,16 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./build/pkg
-          asset_name: pkg-linux-amd64-static
+          asset_name: pkg-linux-amd64
+          asset_content_type: application/x-tar
+
+      - name: Upload Release (2)
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./build/pkg
+          asset_name: pkg
           asset_content_type: application/x-tar
