@@ -32,9 +32,6 @@ jobs:
           - name: macOS Release
             cxx: clang++
             cc: clang
-            toolset: clang
-            toolset-version: 12
-            cxxflags: "-stdlib=libc++"
             mode: Release
             os: macos-latest
             artifact: pkg-macos-amd64
@@ -42,9 +39,6 @@ jobs:
           - name: GCC 9 Release
             cxx: g++-9
             cc: gcc-9
-            toolset: gcc
-            toolset-version: 9
-            cxxflags: ""
             mode: Release
             os: ubuntu-latest
     env:
@@ -64,7 +58,6 @@ jobs:
             -S . -B build \
             -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
-            -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
 
       - name: Build
