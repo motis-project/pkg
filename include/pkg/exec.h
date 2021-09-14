@@ -8,6 +8,8 @@
 
 namespace pkg {
 
+void set_verbose(bool);
+
 struct exec_result {
   friend std::ostream& operator<<(std::ostream&, exec_result const&);
   std::string to_str() const;

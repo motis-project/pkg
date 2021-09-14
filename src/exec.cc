@@ -8,6 +8,10 @@
 
 namespace pkg {
 
+bool verbose = false;
+
+void set_verbose(bool const b) { verbose = b; }
+
 std::ostream& operator<<(std::ostream& out, exec_result const& r) {
   return out << fmt::format(
              "COMMAND=\"{}\":\n"

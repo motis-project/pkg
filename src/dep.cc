@@ -4,7 +4,6 @@
 #include <ostream>
 
 #include "pkg/detect_branch.h"
-#include "pkg/get_home_path.h"
 #include "pkg/git.h"
 #include "pkg/name_from_url.h"
 
