@@ -34,14 +34,16 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
       executor e;
       try {
         // Fetch if commit is not known.
-        if (!commit_exists(d, d->commit_) || !commit_exists(d, bc.commit_)) {
+        if (!commit_exists(d, d->commit_) ||
+            (d->commit_ != bc.commit_ && !commit_exists(d, bc.commit_))) {
           fmt::print("{}: fetch\n", d->name());
           std::cout << std::flush;
           e.exec(d->path_, "git fetch origin");
         }
 
         // Select latest known commit.
-        if (commit_time(d, d->commit_) < commit_time(d, bc.commit_)) {
+        if (d->commit_ != bc.commit_ &&
+            commit_time(d, d->commit_) < commit_time(d, bc.commit_)) {
           d->commit_ = bc.commit_;
           d->branch_ = bc.branch_;
         }

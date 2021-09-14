@@ -12,6 +12,26 @@ bool verbose = false;
 
 void set_verbose(bool const b) { verbose = b; }
 
+#ifdef _MSC_VER
+#define MOTIS_GMT(a, b) gmtime_s(b, a)
+#else
+#define MOTIS_GMT(a, b) gmtime_r(a, b)
+#endif
+
+std::string time(time_t const t) {
+  char buf[sizeof "2011-10-08t07:07:09z-0430"];
+  struct tm result {};
+  MOTIS_GMT(&t, &result);
+  strftime(static_cast<char*>(buf), sizeof buf, "%FT%TZ%z", &result);
+  return buf;
+}
+
+std::string time() {
+  time_t now = 0;
+  std::time(&now);
+  return time(now);
+}
+
 std::ostream& operator<<(std::ostream& out, exec_result const& r) {
   return out << fmt::format(
              "COMMAND=\"{}\":\n"
@@ -34,6 +54,11 @@ exec_exception::exec_exception(exec_result&& r)
 
 exec_result exec(boost::filesystem::path const& working_directory,
                  std::string const& cmd) {
+  if (verbose) {
+    std::cout << "[" << time() << "][" << working_directory << "] " << cmd
+              << "\n";
+  }
+
   namespace bp = boost::process;
   std::stringstream out_ss, err_ss;
 
