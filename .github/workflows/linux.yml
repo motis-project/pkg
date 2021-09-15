@@ -59,8 +59,7 @@ jobs:
           cmake \
             -S . -B build \
             -G Ninja \
-            -DCMAKE_TOOLCHAINFILE=/opt/${{ matrix.config.toolchain }}/toolchain-${{ matrix.config.target }}.cmake \
-            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/${{ matrix.config.toolchain }}/toolchain-${{ matrix.config.target }}.cmake \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
