@@ -89,7 +89,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     try {
       auto f = std::ifstream{};
       f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-      f.open(repo / ".pkg.lock");
+      f.open((repo / ".pkg.lock").generic_string().c_str());
 
       auto lock_hash = cista::hash_t{};
       f >> lock_hash;
@@ -138,7 +138,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   } while (repeat);
 
   {
-    std::ofstream of{deps_root / "CMakeLists.txt"};
+    std::ofstream of{(deps_root / "CMakeLists.txt").generic_string().c_str()};
     of << "cmake_minimum_required(VERSION 3.10)\n"
        << "project(" + deps_root.string() << ")\n\n";
     for (auto const& v : l.sorted()) {
@@ -150,7 +150,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   }
 
   {
-    std::ofstream of{repo / ".pkg.lock"};
+    std::ofstream of{(repo / ".pkg.lock").generic_string().c_str()};
     of << hash << "\n";
     for (auto const& v : l.sorted()) {
       if (v->url_ == ROOT) {
