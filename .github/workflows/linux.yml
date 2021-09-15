@@ -35,8 +35,10 @@ jobs:
             toolchain: x86_64-multilib-linux-musl
           - target: arm
             toolchain: arm-unknown-linux-musleabihf
+            emulator: qemu-arm-static
           - target: arm64
             toolchain: aarch64-unknown-linux-musl
+            emulator: qemu-aarch64-static
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -46,7 +48,7 @@ jobs:
 
       - name: Install Ninja
         if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get install -y --no-install-recommends ninja-build
+        run: sudo apt-get install -y --no-install-recommends ninja-build qemu-user-static
 
       - name: Install Toolchain
         if: matrix.config.toolchain
@@ -66,7 +68,7 @@ jobs:
         run: cmake --build build --target pkg pkg-test
 
       - name: Run Tests
-        run: ./build/pkg-test
+        run: ${{ matrix.config.emulator }} ./build/pkg-test
 
       # ==== DISTRIBUTION ====
       - name: Upload Distribution
