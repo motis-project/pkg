@@ -18,12 +18,12 @@ bool has_flag(int argc, char** argv, char const* str) {
 int main(int argc, char** argv) {
   if (argc < 2) {
     printf(
-        "usage:\n"
-        "  pkg load      [clone dependencies]\n"
+        "Usage:\n"
+        "  pkg load | -l      [clone dependencies]\n"
         "      -h for https        (default: ssh);\n"
         "      -f for hard reset   (default: checkout)]\n"
         "      -r for recursive    (default: false)]\n"
-        "  pkg status    [print status]\n"
+        "  pkg status | -s    [print status]\n"
         "\n"
         "Common flags - apply everywhere:\n"
         "  -v        verbose [print what's going on]\n");
@@ -32,12 +32,12 @@ int main(int argc, char** argv) {
 
   auto const mode = std::string_view{argv[1]};
   set_verbose(has_flag(argc - 1, argv + 1, "-v"));
-  if (mode == "load") {
+  if (mode == "load" || mode == "-l") {
     load_deps(fs::path{"."}, fs::path("deps"),  //
               has_flag(argc - 1, argv + 1, "-h"),  //
               has_flag(argc - 1, argv + 1, "-f"),  //
               has_flag(argc - 1, argv + 1, "-r"));
-  } else if (mode == "status") {
+  } else if (mode == "status" || mode == "-s") {
     print_status(fs::path{"."}, fs::path("deps"));
   }
 }
