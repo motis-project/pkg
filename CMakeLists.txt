@@ -5,6 +5,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 find_package(Threads)
 
+add_subdirectory(deps/cista EXCLUDE_FROM_ALL)
 add_subdirectory(deps/utl EXCLUDE_FROM_ALL)
 add_subdirectory(deps/fmt EXCLUDE_FROM_ALL)
 add_subdirectory(deps/zlib EXCLUDE_FROM_ALL)
@@ -16,6 +17,7 @@ list(REMOVE_ITEM pkg-files main-file)
 add_library(pkglib ${pkg-files})
 target_include_directories(pkglib PUBLIC include)
 target_link_libraries(pkglib
+        cista
         utl
         fmt
         boost

@@ -10,3 +10,6 @@
 [submodule "deps/zlib"]
 	path = deps/zlib
 	url = git@github.com:motis-project/zlib.git
+[submodule "deps/cista"]
+	path = deps/cista
+	url = git@github.com:felixguendling/cista.git

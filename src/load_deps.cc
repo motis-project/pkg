@@ -14,6 +14,8 @@
 
 #include "utl/to_set.h"
 
+#include "cista/hashing.h"
+
 #include "pkg/dependency_loader.h"
 #include "pkg/exec.h"
 #include "pkg/git.h"
@@ -74,6 +76,46 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     }
   };
 
+  auto const hash = [&]() {
+    auto const pred = dep::root(deps_root);
+    auto h = cista::BASE_HASH;
+    for (auto const& d : read_deps(deps_root, &pred, recursive)) {
+      h = cista::hash_combine(h, cista::hash(d.name()), cista::hash(d.commit_));
+    }
+    return h;
+  }();
+
+  if (fs::is_regular_file(repo / ".pkg.lock")) {
+    try {
+      auto f = std::ifstream{};
+      f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+      f.open(repo / ".pkg.lock");
+
+      auto lock_hash = cista::hash_t{};
+      f >> lock_hash;
+
+      auto const check_lock_file = [&]() {
+        auto dep = std::string{};
+        auto commit = std::string{};
+        while (!f.eof() && f.peek() != EOF && f >> dep >> commit) {
+          std::string line;
+          std::getline(f, line);
+          if (get_commit(deps_root / dep) != commit) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      if (lock_hash == hash && check_lock_file()) {
+        return;
+      }
+    } catch (std::exception const& e) {
+      std::cout << "could not read .pkg.lock file: " << e.what()
+                << "\ndoing full check\n";
+    }
+  }
+
   dependency_loader l{deps_root};
   auto repeat = false;
   do {
@@ -95,14 +137,27 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     }
   } while (repeat);
 
-  std::ofstream of{"deps/CMakeLists.txt"};
-  of << "cmake_minimum_required(VERSION 3.10)\n"
-     << "project(" + deps_root.string() << ")\n\n";
-  for (auto const& v : l.sorted()) {
-    if (v->url_ == ROOT) {
-      continue;
+  {
+    std::ofstream of{deps_root / "CMakeLists.txt"};
+    of << "cmake_minimum_required(VERSION 3.10)\n"
+       << "project(" + deps_root.string() << ")\n\n";
+    for (auto const& v : l.sorted()) {
+      if (v->url_ == ROOT) {
+        continue;
+      }
+      of << "add_subdirectory(" << v->name() << " EXCLUDE_FROM_ALL)\n";
     }
-    of << "add_subdirectory(" << v->name() << " EXCLUDE_FROM_ALL)\n";
+  }
+
+  {
+    std::ofstream of{repo / ".pkg.lock"};
+    of << hash << "\n";
+    for (auto const& v : l.sorted()) {
+      if (v->url_ == ROOT) {
+        continue;
+      }
+      of << v->name() << " " << v->commit_ << "\n";
+    }
   }
 }
 
