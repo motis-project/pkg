@@ -29,24 +29,24 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: linux-amd64-noavx-release
+          - target: amd64
             toolchain: x86_64-multilib-linux-musl
-            target: amd64
-          - name: linux-x86-release
+          - target: x86
             toolchain: x86_64-multilib-linux-musl
-            target: x86
-          - name: linux-arm-release
+          - target: arm
             toolchain: arm-unknown-linux-musleabihf
-            target: arm
-          - name: linux-arm64-release
+          - target: arm64
             toolchain: aarch64-unknown-linux-musl
-            target: arm64
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
+
+      - name: Install Ninja
+        if: matrix.config.os != 'macos-latest'
+        run: sudo apt-get install -y --no-install-recommends ninja-build
 
       - name: Install Toolchain
         if: matrix.config.toolchain
