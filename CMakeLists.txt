@@ -16,25 +16,32 @@ list(REMOVE_ITEM pkg-files main-file)
 add_library(pkglib ${pkg-files})
 target_include_directories(pkglib PUBLIC include)
 target_link_libraries(pkglib
-  utl
-  fmt
-  boost
-  boost-filesystem
-  boost-system
-  ${CMAKE_THREAD_LIBS_INIT}
-)
+        utl
+        fmt
+        boost
+        boost-filesystem
+        boost-system
+        ${CMAKE_THREAD_LIBS_INIT}
+        )
 if (MSVC)
-  target_link_libraries(pkglib Userenv.lib)
-endif()
-set_property(TARGET pkglib PROPERTY CXX_STANDARD 17)
+    target_link_libraries(pkglib Userenv.lib)
+endif ()
+target_compile_features(pkglib PUBLIC cxx_std_17)
 
 add_executable(pkg src/main.cc)
 target_link_libraries(pkg pkglib)
-set_property(TARGET pkg PROPERTY CXX_STANDARD 17)
+target_compile_features(pkg PRIVATE cxx_std_17)
+if (${CMAKE_BUILD_TYPE} STREQUAL Release)
+    add_custom_command(
+            TARGET pkg
+            POST_BUILD
+            COMMAND ${CMAKE_STRIP} ${CMAKE_CURRENT_BINARY_DIR}/pkg
+    )
+endif ()
 
-configure_file (
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
-  ${CMAKE_BINARY_DIR}/generated/test_dir.h
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
+        ${CMAKE_BINARY_DIR}/generated/test_dir.h
 )
 file(GLOB_RECURSE pkg-test-files test/*_test.cc)
 add_executable(pkg-test EXCLUDE_FROM_ALL src/read_deps.cc ${pkg-test-files})

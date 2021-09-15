@@ -25,21 +25,41 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    container:
-      image: alpine:3.14
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: linux-amd64-noavx-release
+            toolchain: x86_64-multilib-linux-musl
+            target: amd64
+          - name: linux-x86-release
+            toolchain: x86_64-multilib-linux-musl
+            target: x86
+          - name: linux-arm-release
+            toolchain: arm-unknown-linux-musleabihf
+            target: arm
+          - name: linux-arm64-release
+            toolchain: aarch64-unknown-linux-musl
+            target: arm64
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install packages
-        run: apk add git build-base cmake ninja linux-headers
-
       - uses: actions/checkout@v2
         with:
           submodules: true
+
+      - name: Install Toolchain
+        if: matrix.config.toolchain
+        run: |
+          wget https://github.com/motis-project/musl-toolchains/releases/latest/download/${{ matrix.config.toolchain }}.tar.xz
+          tar xf ${{ matrix.config.toolchain }}.tar.xz -C /opt
 
       - name: CMake
         run: |
           cmake \
             -S . -B build \
             -G Ninja \
+            -DCMAKE_TOOLCHAINFILE=/opt/${{ matrix.config.toolchain }}/toolchain-${{ matrix.config.target }}.cmake \
             -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static" \
             -DCMAKE_BUILD_TYPE=Release
 
@@ -50,13 +70,10 @@ jobs:
         run: ./build/pkg-test
 
       # ==== DISTRIBUTION ====
-      - name: Strip Executable
-        run: strip build/pkg
-
       - name: Upload Distribution
         uses: actions/upload-artifact@v2
         with:
-          name: pkg-linux-amd64
+          name: pkg-linux-${{ matrix.config.target }}
           path: ./build/pkg
 
       - name: Upload Distribution (Legacy Naming)
@@ -74,11 +91,11 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./build/pkg
-          asset_name: pkg-linux-amd64
+          asset_name: pkg-linux-${{ matrix.config.target }}
           asset_content_type: application/x-tar
 
       - name: Upload Release (Legacy Naming)
-        if: github.event.action == 'published'
+        if: github.event.action == 'published' && matrix.config.target == amd64
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
