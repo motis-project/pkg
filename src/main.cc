@@ -30,14 +30,19 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  auto const mode = std::string_view{argv[1]};
-  set_verbose(has_flag(argc - 1, argv + 1, "-v"));
-  if (mode == "load" || mode == "-l") {
-    load_deps(fs::path{"."}, fs::path("deps"),  //
-              has_flag(argc - 1, argv + 1, "-h"),  //
-              has_flag(argc - 1, argv + 1, "-f"),  //
-              has_flag(argc - 1, argv + 1, "-r"));
-  } else if (mode == "status" || mode == "-s") {
-    print_status(fs::path{"."}, fs::path("deps"));
+  try {
+    auto const mode = std::string_view{argv[1]};
+    set_verbose(has_flag(argc - 1, argv + 1, "-v"));
+    if (mode == "load" || mode == "-l") {
+      load_deps(fs::path{"."}, fs::path("deps"),  //
+                has_flag(argc - 1, argv + 1, "-h"),  //
+                has_flag(argc - 1, argv + 1, "-f"),  //
+                has_flag(argc - 1, argv + 1, "-r"));
+    } else if (mode == "status" || mode == "-s") {
+      print_status(fs::path{"."}, fs::path("deps"));
+    }
+  } catch (std::exception const& e) {
+    std::cerr << "error: " << e.what() << "\n";
+    return 1;
   }
 }

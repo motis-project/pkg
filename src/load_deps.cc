@@ -41,6 +41,8 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
             (d->commit_ != bc.commit_ && !commit_exists(d, bc.commit_))) {
           fmt::print("{}: fetch\n", d->name());
           std::cout << std::flush;
+          e.exec(d->path_, "git remote set-url origin {}",
+                 clone_https ? ssh_to_https(d->url_) : d->url_);
           e.exec(d->path_, "git fetch origin");
         }
 
@@ -141,6 +143,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
       } catch (std::exception const& e) {
         fmt::print("Checkout failed for {}: {}\n", d->name(), e.what());
         ex.print_trace();
+        throw;
       }
     }
   } while (repeat);

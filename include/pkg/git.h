@@ -18,6 +18,8 @@ struct commit_info {
   branch_commit bc_;
 };
 
+std::string ssh_to_https(std::string url);
+
 std::string git_shorten(dep const*, std::string const& commit);
 
 void git_clone(executor&, dep const*, bool clone_https);
