@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        mode: [Debug, Release]
+        mode: [ Debug, Release ]
 
     env:
       CXX: cl
@@ -27,16 +27,15 @@ jobs:
           submodules: true
       - uses: seanmiddleditch/gha-setup-ninja@master
 
+      - uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         run: |
-          $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
-          $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
-          Import-Module $devShell
-          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
           cmake --build build --target pkg pkg-test
+
       - name: Run Tests
         run: .\build\pkg-test
+
       - name: Upload Distribution
         if: matrix.mode == 'Release'
         uses: actions/upload-artifact@v1
