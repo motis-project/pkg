@@ -71,13 +71,13 @@ jobs:
 
       # ==== DISTRIBUTION ====
       - name: Upload Distribution
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: pkg-linux-${{ matrix.config.target }}
           path: ./build/pkg
 
       - name: Upload Distribution (Legacy Naming)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: pkg
           path: ./build/pkg
