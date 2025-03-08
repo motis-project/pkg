@@ -16,7 +16,8 @@ bool has_flag(int argc, char** argv, char const* str) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
+  if (argc < 2 || has_flag(argc - 1, argv + 1, "--help") ||
+      has_flag(argc - 1, argv + 1, "-h")) {
     printf(
         "Usage:\n"
         "  pkg load | -l      [clone dependencies]\n"
@@ -40,6 +41,8 @@ int main(int argc, char** argv) {
                 has_flag(argc - 1, argv + 1, "-r"));
     } else if (mode == "status" || mode == "-s") {
       print_status(fs::path{"."}, fs::path("deps"));
+    } else {
+      fmt::print("Unknown mode {}. See pkg --help for usage.", mode);
     }
   } catch (std::exception const& e) {
     std::cerr << "error: " << e.what() << "\n";
