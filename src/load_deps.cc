@@ -27,7 +27,8 @@ namespace fs = boost::filesystem;
 namespace pkg {
 
 void load_deps(fs::path const& repo, fs::path const& deps_root,
-               bool const clone_https, bool const force, bool const recursive) {
+               bool const clone_https, bool const force, bool const recursive,
+               bool const drop_wip) {
   if (!boost::filesystem::is_directory(deps_root)) {
     boost::filesystem::create_directories(deps_root);
   }
@@ -137,6 +138,22 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
       }
       executor ex;
       try {
+        if (!drop_wip) {
+          auto const remote_refs =
+              ex.exec(d->path_,
+                      "git branch -r --contains HEAD --format '%(refname)'")
+                  .out_;
+          auto const num_refs = std::ranges::count(remote_refs, '\n');
+          if (num_refs == 0) {
+            fmt::println(
+                "warning: {} has commits that have not been pushed yet. "
+                "Use --drop-wip to check out the commit from .pkg "
+                "nevertheless.",
+                d->path_.string());
+            continue;
+          }
+        }
+
         git_attach(ex, d, force);
         fmt::print("{}: checkout {}\n", d->name(), git_shorten(d, d->commit_));
         repeat = true;

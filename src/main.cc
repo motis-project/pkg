@@ -21,9 +21,11 @@ int main(int argc, char** argv) {
     printf(
         "Usage:\n"
         "  pkg load | -l      [clone dependencies]\n"
-        "      -h for https        (default: ssh);\n"
-        "      -f for hard reset   (default: checkout)]\n"
-        "      -r for recursive    (default: false)]\n"
+        "      -h          for https        (default: ssh);\n"
+        "      -f          for hard reset   (default: checkout)]\n"
+        "      -r          for recursive    (default: false)]\n"
+        "      --drop-wip  check out ref from .pkg even though there are\n"
+        "                  unpushed changes (default: false)\n"
         "  pkg status | -s    [print status]\n"
         "\n"
         "Common flags - apply everywhere:\n"
@@ -38,7 +40,8 @@ int main(int argc, char** argv) {
       load_deps(fs::path{"."}, fs::path("deps"),  //
                 has_flag(argc - 1, argv + 1, "-h"),  //
                 has_flag(argc - 1, argv + 1, "-f"),  //
-                has_flag(argc - 1, argv + 1, "-r"));
+                has_flag(argc - 1, argv + 1, "-r"),  //
+                has_flag(argc - 1, argv + 1, "--drop-wip"));
     } else if (mode == "status" || mode == "-s") {
       print_status(fs::path{"."}, fs::path("deps"));
     } else {
