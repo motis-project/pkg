@@ -4,7 +4,7 @@
 #include <set>
 #include <string>
 
-#include "utl/struct/comparable.h"
+#include "cista/reflection/comparable.h"
 
 #include "boost/filesystem/path.hpp"
 
@@ -14,7 +14,7 @@ constexpr auto const ROOT = ".";
 constexpr auto const PKG_FILE = ".pkg";
 
 struct branch_commit {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   std::string branch_, commit_;
 };
 

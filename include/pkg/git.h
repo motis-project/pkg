@@ -3,7 +3,7 @@
 #include <set>
 #include <string>
 
-#include "utl/struct/comparable.h"
+#include "cista/reflection/comparable.h"
 
 #include "boost/filesystem/path.hpp"
 
@@ -13,7 +13,7 @@
 namespace pkg {
 
 struct commit_info {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   std::string info_;
   branch_commit bc_;
 };
