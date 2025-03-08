@@ -28,14 +28,14 @@ exec_result exec(boost::filesystem::path const& working_directory,
 
 template <typename... Args>
 exec_result exec(boost::filesystem::path const& working_directory,
-                 char const* command, Args... args) {
-  return exec(working_directory, fmt::format(command, args...));
+                 fmt::format_string<Args...> command, Args&&... args) {
+  return exec(working_directory, fmt::format(fmt::runtime(command), args...));
 }
 
 struct executor {
   template <typename... Args>
   exec_result exec(boost::filesystem::path const& working_directory,
-                   char const* command, Args... args) {
+                   fmt::format_string<Args...> command, Args... args) {
     try {
       return results_.emplace_back(
           ::pkg::exec(working_directory, command, std::forward<Args>(args)...));
