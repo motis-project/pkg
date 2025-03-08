@@ -33,7 +33,7 @@ target_compile_features(pkglib PUBLIC cxx_std_17)
 add_executable(pkg src/main.cc)
 target_link_libraries(pkg pkglib)
 target_compile_features(pkg PRIVATE cxx_std_17)
-if (${CMAKE_BUILD_TYPE} STREQUAL Release AND NOT MSVC)
+if ("${CMAKE_BUILD_TYPE}" STREQUAL Release AND NOT MSVC)
     add_custom_command(
             TARGET pkg
             POST_BUILD
