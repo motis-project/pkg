@@ -77,6 +77,7 @@ jobs:
           path: ./build/pkg
 
       - name: Upload Distribution (Legacy Naming)
+        if: matrix.config.target == 'amd64'
         uses: actions/upload-artifact@v4
         with:
           name: pkg
