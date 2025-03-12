@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     } else if (mode == "status" || mode == "-s") {
       print_status(fs::path{"."}, fs::path("deps"));
     } else {
-      fmt::print("Unknown mode {}. See pkg --help for usage.", mode);
+      fmt::println("Unknown mode {}. See pkg --help for usage.", mode);
     }
   } catch (std::exception const& e) {
     std::cerr << "error: " << e.what() << "\n";
