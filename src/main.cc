@@ -16,8 +16,7 @@ bool has_flag(int argc, char** argv, char const* str) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 2 || has_flag(argc - 1, argv + 1, "--help") ||
-      has_flag(argc - 1, argv + 1, "-h")) {
+  if (argc < 2 || has_flag(argc - 1, argv + 1, "--help")) {
     printf(
         "Usage:\n"
         "  pkg load | -l      [clone dependencies]\n"
