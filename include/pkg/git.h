@@ -18,7 +18,9 @@ struct commit_info {
   branch_commit bc_;
 };
 
-std::string ssh_to_https(std::string url);
+enum Protocol { Ssh, Https };
+
+std::string url_to_protocol(std::string url, Protocol protocol);
 
 std::string git_shorten(dep const*, std::string const& commit);
 

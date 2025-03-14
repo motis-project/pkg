@@ -43,7 +43,13 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
           fmt::print("{}: fetch\n", d->name());
           std::cout << std::flush;
           e.exec(d->path_, "git remote set-url origin {}",
-                 clone_https ? ssh_to_https(d->url_) : d->url_);
+                 url_to_protocol(
+                     d->url_, clone_https ? Protocol::Https : Protocol::Ssh));
+          if (clone_https) {
+            // Push needs to use ssh even with http
+            e.exec(d->path_, "git remote set-url --push origin {}",
+                   url_to_protocol(d->url_, Protocol::Ssh));
+          }
           e.exec(d->path_, "git fetch origin");
         }
 
