@@ -28,11 +28,11 @@ target_link_libraries(pkglib
 if (MSVC)
     target_link_libraries(pkglib Userenv.lib)
 endif ()
-target_compile_features(pkglib PUBLIC cxx_std_17)
+target_compile_features(pkglib PUBLIC cxx_std_20)
 
 add_executable(pkg src/main.cc)
 target_link_libraries(pkg pkglib)
-target_compile_features(pkg PRIVATE cxx_std_17)
+target_compile_features(pkg PRIVATE cxx_std_20)
 if ("${CMAKE_BUILD_TYPE}" STREQUAL Release AND NOT MSVC)
     add_custom_command(
             TARGET pkg
@@ -46,7 +46,7 @@ configure_file(
         ${CMAKE_BINARY_DIR}/generated/test_dir.h
 )
 file(GLOB_RECURSE pkg-test-files test/*_test.cc)
-add_executable(pkg-test EXCLUDE_FROM_ALL src/read_deps.cc ${pkg-test-files})
+add_executable(pkg-test EXCLUDE_FROM_ALL src/read_deps.cc src/git.cc ${pkg-test-files})
 target_include_directories(pkg-test PRIVATE ${CMAKE_BINARY_DIR}/generated)
 target_link_libraries(pkg-test pkglib)
 set_property(TARGET pkg-test PROPERTY CXX_STANDARD 17)

@@ -13,21 +13,54 @@
 
 namespace pkg {
 
-std::string ssh_to_https(std::string url) {
-  if (!utl::cstr{url.c_str(), url.size()}.starts_with("git")) {
+std::string normalize_url(std::string url) {
+  if (url.starts_with("ssh://") || url.starts_with("https://") ||
+      url.starts_with("http://")) {
     return url;
-  } else if (auto const colon_pos = url.find_last_of(':');
-             colon_pos == std::string::npos) {
-    return url;
-  } else {
+  }
+
+  auto const at_pos = url.find("@");
+  auto const colon_pos = url.find(":");
+
+  // Try to detect urls in the form username@ssh-server:path
+  if (at_pos != std::string::npos && colon_pos != std::string::npos &&
+      at_pos < colon_pos) {
     // Replace ":" -> "/"
     url[colon_pos] = '/';
 
     // Replace git@ -> https://
-    url = "https://" + url.substr(4);
-
-    return url;
+    return "ssh://" + url;
   }
+
+  // Give up and hope for the best
+  return url;
+}
+
+std::string url_to_protocol(std::string url, protocol const p) {
+  auto const normalized_url = normalize_url(url);
+
+  auto const protocol_len = normalized_url.find("://");
+  auto const without_protocol = normalized_url.substr(protocol_len + 3);
+
+  switch (p) {
+    case protocol::kHttps: {
+      auto const username_pos = without_protocol.find('@');
+      if (username_pos != std::string::npos) {
+        return "https://" + without_protocol.substr(username_pos + 1);
+      } else {
+        return "https://" + without_protocol;
+      }
+    }
+    case protocol::kSsh: {
+      if (without_protocol.contains('@')) {
+        return "ssh://" + without_protocol;
+      } else {
+        return "ssh://git@" + without_protocol;
+      }
+    }
+  }
+
+  return url;
 }
 
 std::string git_shorten(dep const* d, std::string const& commit) {
@@ -78,8 +111,12 @@ void git_clone(executor& e, dep const* d, bool const to_https) {
   }
 
   e.exec(d->path_.parent_path(), "git clone {} {}",
-         to_https ? ssh_to_https(d->url_) : d->url_,
+         url_to_protocol(d->url_, to_https ? protocol::kHttps : protocol::kSsh),
          boost::filesystem::absolute(d->path_).string());
+  if (to_https) {
+    e.exec(d->path_, "git remote set-url --push origin {}",
+           url_to_protocol(d->url_, protocol::kSsh));
+  }
   e.exec(d->path_, "git checkout {}", d->commit_);
   e.exec(d->path_, "git submodule update --init --recursive");
 }
