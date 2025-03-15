@@ -101,7 +101,7 @@ void git_attach(executor& e, dep const* d, bool const force) {
 
   if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
     e.exec(d->path_, "git submodule sync");
-    e.exec(d->path_, "git submodule update --init --recursive --remote");
+    e.exec(d->path_, "git submodule update --init --recursive");
   }
 }
 
