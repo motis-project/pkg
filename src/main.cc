@@ -11,7 +11,7 @@ using namespace pkg;
 
 extern bool verbose;
 
-bool has_flag(const std::span<char*> args, char const* str) {
+bool has_flag(std::span<char*> args, char const* str) {
   return std::any_of(args.begin(), args.end(),
                      [&](char* arg) { return std::strcmp(arg, str) == 0; });
 }
@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  const auto https = has_flag(args, "-h");
-  const auto ssh = has_flag(args, "--ssh");
+  auto const https = has_flag(args, "-h");
+  auto const ssh = has_flag(args, "--ssh");
   if (https && ssh) {
     fmt::println(stderr, "-h and --ssh cannot be used at the same time.");
     return 1;

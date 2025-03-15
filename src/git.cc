@@ -36,14 +36,14 @@ std::string normalize_url(std::string url) {
   return url;
 }
 
-std::string url_to_protocol(std::string url, Protocol protocol) {
+std::string url_to_protocol(std::string url, protocol const p) {
   auto const normalized_url = normalize_url(url);
 
   auto const protocol_len = normalized_url.find("://");
   auto const without_protocol = normalized_url.substr(protocol_len + 3);
 
-  switch (protocol) {
-    case Protocol::Https: {
+  switch (p) {
+    case protocol::kHttps: {
       auto const username_pos = without_protocol.find('@');
       if (username_pos != std::string::npos) {
         return "https://" + without_protocol.substr(username_pos + 1);
@@ -51,7 +51,7 @@ std::string url_to_protocol(std::string url, Protocol protocol) {
         return "https://" + without_protocol;
       }
     }
-    case Protocol::Ssh: {
+    case protocol::kSsh: {
       if (without_protocol.contains('@')) {
         return "ssh://" + without_protocol;
       } else {
@@ -111,11 +111,11 @@ void git_clone(executor& e, dep const* d, bool const to_https) {
   }
 
   e.exec(d->path_.parent_path(), "git clone {} {}",
-         url_to_protocol(d->url_, to_https ? Protocol::Https : Protocol::Ssh),
+         url_to_protocol(d->url_, to_https ? protocol::kHttps : protocol::kSsh),
          boost::filesystem::absolute(d->path_).string());
   if (to_https) {
     e.exec(d->path_, "git remote set-url --push origin {}",
-           url_to_protocol(d->url_, Protocol::Ssh));
+           url_to_protocol(d->url_, protocol::kSsh));
   }
   e.exec(d->path_, "git checkout {}", d->commit_);
   e.exec(d->path_, "git submodule update --init --recursive");
