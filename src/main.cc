@@ -17,6 +17,9 @@ bool has_flag(std::span<char*> args, char const* str) {
 }
 
 int main(int argc, char** argv) {
+  // This is a test
+  printf("This is a test");
+
   auto const args = std::span(argv + 1, argc - 1);
   if (argc < 2 || has_flag(args, "--help")) {
     printf(
