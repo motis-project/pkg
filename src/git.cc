@@ -1,10 +1,8 @@
 #include "pkg/git.h"
-#include <fmt/base.h>
 
 #include <algorithm>
-#include <sstream>
 
-#include <boost/filesystem.hpp>
+#include "boost/filesystem.hpp"
 
 #include "utl/erase.h"
 #include "utl/parser/cstr.h"
@@ -103,19 +101,13 @@ std::string get_commit(executor& e, boost::filesystem::path const& p,
 std::optional<std::string> as_branch(executor& e,
                                      boost::filesystem::path const& p,
                                      std::string const& commit) {
-  auto const out =
-      e.exec(p, "git for-each-ref --format=%(refname:lstrip=-1) refs/heads")
-          .out_;
-  auto ss = std::istringstream(out);
-  std::string ref;
-  while (ss.good()) {
-    ss >> ref;
-    if (get_commit(p, ref) == commit) {
-      return {ref};
-    }
-  }
-
-  return {};
+  auto const out = e.exec(p,
+                          "git for-each-ref --points-at {} "
+                          "--format=%(refname:short) refs/heads",
+                          commit)
+                       .out_;
+  auto const branch = utl::get_line(out);
+  return branch.len == 0 ? std::nullopt : std::optional{branch.to_str()};
 }
 
 std::optional<std::string> as_branch(boost::filesystem::path const& p,
@@ -136,7 +128,7 @@ void git_attach(executor& e, dep const* d, bool const force) {
   auto const branch = as_branch(e, d->path_, d->commit_);
   auto const target = branch.has_value() ? branch.value() : d->commit_;
   if (force) {
-    e.exec(d->path_, "get checkout --detach");
+    e.exec(d->path_, "git checkout --detach");
     e.exec(d->path_, "git reset --hard {}", target);
   } else {
     e.exec(d->path_, "git checkout {}", target);

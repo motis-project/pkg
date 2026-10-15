@@ -38,13 +38,8 @@ void print_status(std::vector<dep*> const& all) {
       auto const& c = d->pred_referenced_commits_.at(pred);
       fmt::print(" commit={}", git_shorten(d, c));
 
-      // Print branch only if not all predecessors reference the same commit.
-      auto const branch = as_branch(d->path_, c);
-      if (branch.has_value() &&
-          !std::all_of(begin(d->referenced_commits_),
-                       end(d->referenced_commits_),
-                       [&](auto&& ref) { return ref.first == c; })) {
-        fmt::print(" (branch={})", branch.value());
+      if (auto const branch = as_branch(d->path_, c); branch.has_value()) {
+        fmt::print(" (branch={})", *branch);
       }
     }
 

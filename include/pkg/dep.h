@@ -24,8 +24,6 @@ struct dep {
 
   static dep root(boost::filesystem::path const& root_repo);
 
-  void write_pkg_file() const;
-
   bool is_root() const;
 
   boost::filesystem::path pkg_file() const;

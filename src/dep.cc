@@ -1,8 +1,6 @@
 #include "pkg/dep.h"
 
-#include <algorithm>
-#include <fstream>
-#include <ostream>
+#include <utility>
 
 #include "pkg/name_from_url.h"
 
@@ -13,19 +11,6 @@ dep::dep(boost::filesystem::path const& deps_root, std::string url,
     : path_{deps_root / name_from_url(url)},
       url_{std::move(url)},
       commit_{std::move(commit)} {}
-
-void dep::write_pkg_file() const {
-  std::vector<dep*> succs{begin(succs_), end(succs_)};
-  std::sort(begin(succs), end(succs),
-            [](auto const* a, auto const* b) { return a->name() < b->name(); });
-
-  std::ofstream f{pkg_file().string().c_str()};
-  for (auto const s : succs) {
-    f << "[" << s->name() << "]\n"  //
-      << "  url=" << s->url_ << "\n"  //
-      << "  commit=" << s->commit_ << "\n";
-  }
-}
 
 dep dep::root(boost::filesystem::path const& root_repo) {
   dep d;
