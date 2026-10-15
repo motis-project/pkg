@@ -6,7 +6,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "boost/filesystem/path.hpp"
@@ -34,7 +33,8 @@ public:
   std::optional<dep*> resolve(std::string const& url) const;
 
 private:
-  void retrieve(dep* pred, iteration_fn_t const&, bool recursive);
+  void retrieve(dep* pred, iteration_fn_t const&, bool recursive,
+                std::map<std::string, std::string> const& pinned_urls);
 
   boost::filesystem::path deps_root_;
   std::map<std::string, dep*> deps_;
