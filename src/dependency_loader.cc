@@ -22,8 +22,6 @@ dependency_loader::dependency_loader(fs::path deps_root)
 
 dependency_loader::~dependency_loader() = default;
 
-dep* dependency_loader::root() { return deps_.at(ROOT); }
-
 std::optional<dep*> dependency_loader::resolve(std::string const& url) const {
   return utl::lookup(deps_, name_from_url(url));
 }
@@ -83,13 +81,12 @@ void dependency_loader::retrieve(
       return created.get();
     });
 
-    auto const bc = branch_commit{d.branch_, d.commit_};
-    succ->referenced_commits_[bc].emplace(pred);
-    succ->pred_referenced_commits_[pred] = bc;
+    succ->referenced_commits_[d.commit_].emplace(pred);
+    succ->pred_referenced_commits_[pred] = d.commit_;
     succ->preds_.insert(pred);
     pred->succs_.insert(succ);
 
-    iterate(succ, bc);
+    iterate(succ, d.commit_);
     retrieve(succ, iterate, recursive, pinned_urls);
   }
 }

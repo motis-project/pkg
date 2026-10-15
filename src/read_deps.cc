@@ -1,6 +1,5 @@
 #include "pkg/read_deps.h"
 
-#include <cctype>
 #include <fstream>
 #include <optional>
 #include <sstream>
@@ -52,8 +51,7 @@ std::set<dep> read_deps(fs::path const& deps_root,
     auto const& settings = entry.second;
     return dep{deps_root,
                settings.template get<std::string>(pt::path{"url"}, ""),
-               settings.template get<std::string>(pt::path{"commit"}, ""),
-               settings.template get<std::string>(pt::path{"branch"}, "")};
+               settings.template get<std::string>(pt::path{"commit"}, "")};
   });
 }
 

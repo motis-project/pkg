@@ -15,8 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install clang-format
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 21
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends clang-format-21
+
       - name: Format files
-        run: find include src test -type f -not -name "doctest.h" -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format -i
+        run: find include src test -type f -not -name "doctest.h" -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-21 -i
 
       - name: Check for differences
         run: |

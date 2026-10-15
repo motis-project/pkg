@@ -1,9 +1,7 @@
 #pragma once
 
-#include <set>
+#include <optional>
 #include <string>
-
-#include "cista/reflection/comparable.h"
 
 #include "boost/filesystem/path.hpp"
 
@@ -11,12 +9,6 @@
 #include "pkg/exec.h"
 
 namespace pkg {
-
-struct commit_info {
-  CISTA_COMPARABLE()
-  std::string info_;
-  branch_commit bc_;
-};
 
 enum protocol { kSsh, kHttps };
 
@@ -26,6 +18,9 @@ std::string git_shorten(dep const*, std::string const& commit);
 
 void git_clone(executor&, dep const*, bool clone_https);
 
+std::optional<std::string> as_branch(boost::filesystem::path const&,
+                                     std::string const&);
+
 void git_attach(executor&, dep const*, bool force);
 
 std::string get_remote(executor&, boost::filesystem::path const& p,
@@ -34,20 +29,10 @@ std::string get_remote(executor&, boost::filesystem::path const& p,
 std::string get_commit(boost::filesystem::path const& p,
                        std::string const& target = "HEAD");
 
-std::string commit(boost::filesystem::path const& p, std::string const& msg);
-
-void push(boost::filesystem::path const& p);
-
-std::vector<commit_info> get_commit_infos(
-    boost::filesystem::path const& p, std::set<branch_commit> const& commits);
-
 bool commit_exists(dep const*, std::string const& commit);
 
 std::string commit_date(dep const*, std::string const& commit);
 
 std::time_t commit_time(dep const*, std::string const& commit);
-
-bool is_fast_forward(boost::filesystem::path const& p,
-                     std::string const& commit1, std::string const& commit2);
 
 }  // namespace pkg

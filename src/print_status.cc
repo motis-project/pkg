@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "fmt/base.h"
 #include "fmt/color.h"
 
 #include "pkg/color_output.h"
@@ -35,14 +36,10 @@ void print_status(std::vector<dep*> const& all) {
 
     if (d->referenced_commits_.size() > 1) {
       auto const& c = d->pred_referenced_commits_.at(pred);
-      fmt::print(" commit={}", git_shorten(d, c.commit_));
+      fmt::print(" commit={}", git_shorten(d, c));
 
-      // Print branch only if not all predecessors reference the same branch.
-      auto const branch = begin(d->referenced_commits_)->first.branch_;
-      if (!std::all_of(
-              begin(d->referenced_commits_), end(d->referenced_commits_),
-              [&](auto&& ref) { return ref.first.branch_ == branch; })) {
-        fmt::print(" branch={}", c.branch_);
+      if (auto const branch = as_branch(d->path_, c); branch.has_value()) {
+        fmt::print(" (branch={})", *branch);
       }
     }
 
@@ -71,9 +68,12 @@ void print_status(fs::path const& repo, fs::path const& deps_root) {
       fmt::print("  {} has {} commits\n", d->name(),
                  d->referenced_commits_.size());
       for (auto const& [commit, preds] : d->referenced_commits_) {
-        fmt::print("    branch={}, commit={} ({}), referenced by ",
-                   commit.branch_, git_shorten(d, commit.commit_),
-                   commit_date(d, commit.commit_));
+        fmt::print("    commit={}", git_shorten(d, commit));
+        if (auto const branch = as_branch(d->path_, commit);
+            branch.has_value()) {
+          fmt::print(", branch={}", *branch);
+        }
+        fmt::print(" ({}), referenced by ", commit_date(d, commit));
         for (auto const& p : preds) {
           fmt::print("{} ", p->name());
         }

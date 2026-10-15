@@ -1,13 +1,9 @@
 #include "pkg/git.h"
 
-#include <algorithm>
-#include <iostream>
-
 #include "boost/filesystem.hpp"
 
 #include "utl/erase.h"
 #include "utl/parser/cstr.h"
-#include "utl/to_vec.h"
 
 #include "pkg/exec.h"
 
@@ -99,30 +95,83 @@ std::string get_commit(executor& e, boost::filesystem::path const& p,
   return out;
 }
 
+std::optional<std::string> branch_at(executor& e,
+                                     boost::filesystem::path const& p,
+                                     std::string const& commit,
+                                     std::string const& refs) {
+  auto const out =
+      e.exec(p, "git for-each-ref --points-at {} --format=%(refname) {}",
+             commit, refs)
+          .out_;
+  auto branch = std::optional<std::string>{};
+  for (auto const line : utl::lines{out}) {
+    // refs/heads/feature/a -> feature/a
+    auto const name = line.view().substr(refs.size() + 1);
+    if (name == "master") {
+      return "master";  // prefer master if commit is head of multiple branches
+    }
+    if (name != "HEAD" && !branch.has_value()) {
+      branch = std::string{name};
+    }
+  }
+  return branch;
+}
+
+std::optional<std::string> as_branch(boost::filesystem::path const& p,
+                                     std::string const& commit) {
+  auto e = executor{};
+  return branch_at(e, p, commit, "refs/heads");
+}
+
+void checkout(executor& e, dep const* d) {
+  if (auto const branch = branch_at(e, d->path_, d->commit_, "refs/heads")) {
+    e.exec(d->path_, "git checkout {}", *branch);
+    return;
+  }
+
+  auto const remote = get_remote(e, d->path_, d->url_);
+  if (auto const branch =
+          branch_at(e, d->path_, d->commit_, "refs/remotes/" + remote)) {
+    auto const remote_branch = remote + "/" + *branch;
+
+    // `:trackshort`
+    // ">" (ahead)
+    // "<" (behind)
+    // "<>" (ahead and behind)
+    // "=" (in sync)
+    auto const local =
+        e.exec(d->path_,
+               "git for-each-ref "
+               "--format=%(upstream)%(upstream:trackshort) refs/heads/{}",
+               *branch)
+            .out_;
+    if (local.empty() || utl::cstr{local}.trim().view() ==
+                             "refs/remotes/" + remote_branch + "<") {
+      // No local branch -> set it up
+      // or local branch is behind remote -> fast-forward
+      e.exec(d->path_, "git checkout -B {} --track {}", *branch, remote_branch);
+      return;
+    }
+  }
+
+  e.exec(d->path_, "git checkout {}", d->commit_);
+}
+
 void git_attach(executor& e, dep const* d, bool const force) {
   if (get_commit(e, d->path_) == d->commit_) {
     return;
   }
 
   if (!commit_exists(d, d->commit_)) {
-    auto const remote = get_remote(e, d->path_, d->url_);
-    e.exec(d->path_, "git fetch {}", remote);
-    e.exec(d->path_, "git checkout -B {} {}/{}", d->branch_, remote,
-           d->branch_);
+    e.exec(d->path_, "git fetch {}", get_remote(e, d->path_, d->url_));
   }
 
-  std::string branch_head_commit;
-  try {
-    branch_head_commit = get_commit(e, d->path_, d->branch_);
-  } catch (std::exception const& e) {
-    fmt::print("warning: unknown branch {} for dependency {}\n", d->branch_,
-               d->name());
-    std::cout << std::flush;
+  if (force) {
+    e.exec(d->path_, "git checkout --detach");
+    e.exec(d->path_, "git reset --hard {}", d->commit_);
+  } else {
+    checkout(e, d);
   }
-  auto const is_branch_head = branch_head_commit == d->commit_;
-  auto const ref = is_branch_head ? d->branch_ : d->commit_;
-  force ? e.exec(d->path_, "git reset --hard {}", ref)
-        : e.exec(d->path_, "git checkout {}", ref);
 
   if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
     e.exec(d->path_, "git submodule sync");
@@ -142,39 +191,14 @@ void git_clone(executor& e, dep const* d, bool const to_https) {
     e.exec(d->path_, "git remote set-url --push origin {}",
            url_to_protocol(d->url_, protocol::kSsh));
   }
-  e.exec(d->path_, "git checkout {}", d->commit_);
+  checkout(e, d);
   e.exec(d->path_, "git submodule update --init --recursive");
-}
-
-void git_attach(dep const* d, bool const force) {
-  auto e = executor{};
-  git_attach(e, d, force);
 }
 
 std::string get_commit(boost::filesystem::path const& p,
                        std::string const& target) {
   auto e = executor{};
   return get_commit(e, p, target);
-}
-
-std::string commit(boost::filesystem::path const& p, std::string const& msg) {
-  constexpr auto const PKG_FILE = ".pkg";
-  exec(p, "git add {}", PKG_FILE);
-  exec(p, "git commit -m \"{}\"", msg);
-  return get_commit(p);
-}
-
-void push(boost::filesystem::path const& p) { exec(p, "git push"); }
-
-std::vector<commit_info> get_commit_infos(
-    boost::filesystem::path const& p, std::set<branch_commit> const& commits) {
-  auto infos = utl::to_vec(commits, [&](auto&& bc) -> commit_info {
-    auto info = exec(p, "git show -s --format=%at {}", bc.commit_).out_;
-    info.resize(info.size() - 1);
-    return {info, bc};
-  });
-  std::sort(begin(infos), end(infos), std::greater<>());
-  return infos;
 }
 
 bool commit_exists(dep const* d, std::string const& commit) {
@@ -199,12 +223,6 @@ std::time_t commit_time(dep const* d, std::string const& commit) {
       exec(d->path_, "git show -s --date=local --format=%at {}", commit).out_;
   info.resize(info.size() - 1);
   return std::stol(info);
-}
-
-bool is_fast_forward(boost::filesystem::path const& p,
-                     std::string const& commit1, std::string const& commit2) {
-  return exec(p, "git merge-base --is-ancestor {} {}", commit1, commit2)
-             .exit_code_ == 0;
 }
 
 }  // namespace pkg

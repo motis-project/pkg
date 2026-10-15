@@ -3,20 +3,13 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <mutex>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "boost/filesystem.hpp"
 #include "boost/interprocess/sync/file_lock.hpp"
 #include "boost/interprocess/sync/scoped_lock.hpp"
-
-#include "fmt/format.h"
-
-#include "utl/parser/file.h"
-#include "utl/to_set.h"
 
 #include "cista/hashing.h"
 
@@ -59,13 +52,12 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     boost::filesystem::create_directories(deps_root);
   }
 
-  auto const iterator = [&](dep* d, branch_commit const& bc) {
+  auto const iterator = [&](dep* d, std::string const& commit) {
     if (fs::is_directory(d->path_)) {
       executor e;
       try {
         // Fetch if commit is not known.
-        if (!commit_exists(d, d->commit_) ||
-            (d->commit_ != bc.commit_ && !commit_exists(d, bc.commit_))) {
+        if (!commit_exists(d, commit)) {
           auto const remote = get_remote(e, d->path_, d->url_);
           fmt::print("{} ({}): fetch\n", d->name(), remote);
 
@@ -82,10 +74,9 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
         }
 
         // Select latest known commit.
-        if (d->commit_ != bc.commit_ &&
-            commit_time(d, d->commit_) < commit_time(d, bc.commit_)) {
-          d->commit_ = bc.commit_;
-          d->branch_ = bc.branch_;
+        if (d->commit_ != commit &&
+            commit_time(d, d->commit_) < commit_time(d, commit)) {
+          d->commit_ = commit;
         }
       } catch (std::exception const& ex) {
         fmt::print("Rev-Update failed for {}: {}\n", d->name(), ex.what());
@@ -192,8 +183,8 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
           }
         }
 
-        git_attach(ex, d, force);
         fmt::print("{}: checkout {}\n", d->name(), git_shorten(d, d->commit_));
+        git_attach(ex, d, force);
         repeat = true;
       } catch (std::exception const& e) {
         fmt::print("Checkout failed for {}: {}\n", d->name(), e.what());
