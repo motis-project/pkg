@@ -157,8 +157,16 @@ void checkout(executor& e, dep const* d) {
   e.exec(d->path_, "git checkout {}", d->commit_);
 }
 
+void update_submodules(executor& e, dep const* d, bool const force) {
+  if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
+    e.exec(d->path_, "git submodule sync");
+    e.exec(d->path_, "git submodule update --init --recursive{}",
+           force ? " --force" : "");
+  }
+}
+
 void git_attach(executor& e, dep const* d, bool const force) {
-  if (get_commit(e, d->path_) == d->commit_) {
+  if (!force && get_commit(e, d->path_) == d->commit_) {
     return;
   }
 
@@ -167,16 +175,23 @@ void git_attach(executor& e, dep const* d, bool const force) {
   }
 
   if (force) {
-    e.exec(d->path_, "git checkout --detach");
-    e.exec(d->path_, "git reset --hard {}", d->commit_);
+    e.exec(d->path_, "git checkout --force --detach {}", d->commit_);
   } else {
     checkout(e, d);
   }
+  update_submodules(e, d, force);
+}
 
-  if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
-    e.exec(d->path_, "git submodule sync");
-    e.exec(d->path_, "git submodule update --init --recursive");
-  }
+bool is_clean(boost::filesystem::path const& p) {
+  return exec(p,
+              "git status --porcelain --untracked-files=no "
+              "--ignore-submodules=untracked")
+      .out_.empty();
+}
+
+void discard_changes(executor& e, dep const* d) {
+  e.exec(d->path_, "git reset --hard");
+  update_submodules(e, d, true);
 }
 
 void git_clone(executor& e, dep const* d, bool const to_https) {

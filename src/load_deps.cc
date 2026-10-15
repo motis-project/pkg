@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -52,10 +53,16 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     boost::filesystem::create_directories(deps_root);
   }
 
+  auto checked = std::set<std::string>{};
   auto const iterator = [&](dep* d, std::string const& commit) {
-    if (fs::is_directory(d->path_)) {
+    if (fs::exists(d->path_ / ".git")) {
       executor e;
       try {
+        if (force && checked.insert(d->name()).second && !is_clean(d->path_)) {
+          fmt::print("{}: discard local changes\n", d->name());
+          discard_changes(e, d);
+        }
+
         // Fetch if commit is not known.
         if (!commit_exists(d, commit)) {
           auto const remote = get_remote(e, d->path_, d->url_);
@@ -94,10 +101,11 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
           fmt::print("Repo checkout failed for {}: {}\n", d->name(), ex.what());
           e.print_trace();
 
-          std::cout << "Retry clone\n";
-          if (i != 0) {
-            clone_retry(i - 1);
+          if (i == 0) {
+            throw;
           }
+          std::cout << "Retry clone\n";
+          clone_retry(i - 1);
         }
       };
 
@@ -114,7 +122,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     return h;
   }();
 
-  auto const name = (fs::absolute(repo) / ".pkg.mutex").generic_string();
+  auto const name = (fs::absolute(deps_root) / ".pkg.mutex").generic_string();
   {
     auto const create_file_if_not_exists = std::ofstream{name};
   }
@@ -142,7 +150,9 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
       while (!f.eof() && f.peek() != EOF && f >> dep >> commit) {
         std::string line;
         std::getline(f, line);
-        if (get_commit(deps_root / dep) != commit) {
+        auto const p = deps_root / dep;
+        if (!fs::exists(p / ".git") || get_commit(p) != commit ||
+            (force && !is_clean(p))) {
           return false;
         }
         lock_deps.emplace_back(dep);
@@ -163,9 +173,22 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     repeat = false;
     l.retrieve(repo, iterator, recursive);
     for (auto const& d : l.get_all()) {
-      if (d->url_ == ROOT || d->commit_ == get_commit(d->path_)) {
+      if (d->url_ == ROOT) {
         continue;
       }
+
+      auto const is_checked_out = [&]() {
+        try {
+          return get_commit(d->path_) == d->commit_;
+        } catch (std::exception const&) {
+          return false;
+        }
+      }();
+
+      if (is_checked_out) {
+        continue;
+      }
+
       executor ex;
       try {
         if (!force) {
