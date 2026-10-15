@@ -95,21 +95,23 @@ std::string get_commit(executor& e, boost::filesystem::path const& p,
   return out;
 }
 
-std::optional<std::string> as_branch(executor& e,
+std::optional<std::string> branch_at(executor& e,
                                      boost::filesystem::path const& p,
-                                     std::string const& commit) {
-  auto const out = e.exec(p,
-                          "git for-each-ref --points-at {} "
-                          "--format=%(refname:short) refs/heads",
-                          commit)
-                       .out_;
+                                     std::string const& commit,
+                                     std::string const& refs) {
+  auto const out =
+      e.exec(p, "git for-each-ref --points-at {} --format=%(refname) {}",
+             commit, refs)
+          .out_;
   auto branch = std::optional<std::string>{};
   for (auto const line : utl::lines{out}) {
-    if (line.view() == "master") {
-      return "master";
+    // refs/heads/feature/a -> feature/a
+    auto const name = line.view().substr(refs.size() + 1);
+    if (name == "master") {
+      return "master";  // prefer master if commit is head of multiple branches
     }
-    if (!branch.has_value()) {
-      branch = line.to_str();
+    if (name != "HEAD" && !branch.has_value()) {
+      branch = std::string{name};
     }
   }
   return branch;
@@ -118,7 +120,41 @@ std::optional<std::string> as_branch(executor& e,
 std::optional<std::string> as_branch(boost::filesystem::path const& p,
                                      std::string const& commit) {
   auto e = executor{};
-  return as_branch(e, p, commit);
+  return branch_at(e, p, commit, "refs/heads");
+}
+
+void checkout(executor& e, dep const* d) {
+  if (auto const branch = branch_at(e, d->path_, d->commit_, "refs/heads")) {
+    e.exec(d->path_, "git checkout {}", *branch);
+    return;
+  }
+
+  auto const remote = get_remote(e, d->path_, d->url_);
+  if (auto const branch =
+          branch_at(e, d->path_, d->commit_, "refs/remotes/" + remote)) {
+    auto const remote_branch = remote + "/" + *branch;
+
+    // `:trackshort`
+    // ">" (ahead)
+    // "<" (behind)
+    // "<>" (ahead and behind)
+    // "=" (in sync)
+    auto const local =
+        e.exec(d->path_,
+               "git for-each-ref "
+               "--format=%(upstream)%(upstream:trackshort) refs/heads/{}",
+               *branch)
+            .out_;
+    if (local.empty() || utl::cstr{local}.trim().view() ==
+                             "refs/remotes/" + remote_branch + "<") {
+      // No local branch -> set it up
+      // or local branch is behind remote -> fast-forward
+      e.exec(d->path_, "git checkout -B {} --track {}", *branch, remote_branch);
+      return;
+    }
+  }
+
+  e.exec(d->path_, "git checkout {}", d->commit_);
 }
 
 void git_attach(executor& e, dep const* d, bool const force) {
@@ -134,8 +170,7 @@ void git_attach(executor& e, dep const* d, bool const force) {
     e.exec(d->path_, "git checkout --detach");
     e.exec(d->path_, "git reset --hard {}", d->commit_);
   } else {
-    e.exec(d->path_, "git checkout {}",
-           as_branch(e, d->path_, d->commit_).value_or(d->commit_));
+    checkout(e, d);
   }
 
   if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
@@ -156,7 +191,7 @@ void git_clone(executor& e, dep const* d, bool const to_https) {
     e.exec(d->path_, "git remote set-url --push origin {}",
            url_to_protocol(d->url_, protocol::kSsh));
   }
-  e.exec(d->path_, "git checkout {}", d->commit_);
+  checkout(e, d);
   e.exec(d->path_, "git submodule update --init --recursive");
 }
 

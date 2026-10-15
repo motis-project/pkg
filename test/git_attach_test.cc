@@ -66,5 +66,48 @@ TEST_CASE("git_attach") {
   // no branch at the commit
   CHECK(!pkg::as_branch(d.path_, commit("c")).has_value());
 
+  // remote branch heads, as after a fetch
+  pkg::exec(d.path_, "git remote add origin {}", d.url_);
+  auto const remote_head = [&](std::string const& from,
+                               std::string const& branch) {
+    pkg::exec(d.path_, "git checkout -q --detach {}", from);
+    auto const c = commit(branch);
+    pkg::exec(d.path_, "git update-ref refs/remotes/origin/{} {}", branch, c);
+    pkg::exec(d.path_, "git checkout -q --detach {}", a);
+    return c;
+  };
+
+  // master tracks origin/master and is behind: fast-forward
+  d.commit_ = remote_head("master", "master");
+  pkg::exec(d.path_, "git branch -q -u origin/master master");
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "master");
+  CHECK(pkg::get_commit(d.path_, "master") == d.commit_);
+
+  // no local branch for origin/feature/f: create it
+  d.commit_ = remote_head(a, "feature/f");
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "feature/f");
+  CHECK(pkg::get_commit(d.path_) == d.commit_);
+
+  // dev tracks origin/dev and has diverged: detach, dev stays
+  pkg::exec(d.path_, "git checkout -q dev");
+  auto const local_dev = commit("local");
+  d.commit_ = remote_head(b, "dev");
+  pkg::exec(d.path_, "git branch -q -u origin/dev dev");
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "HEAD");
+  CHECK(pkg::get_commit(d.path_) == d.commit_);
+  CHECK(pkg::get_commit(d.path_, "dev") == local_dev);
+
+  // release tracks fork/release, not origin/release: detach, release stays
+  pkg::exec(d.path_, "git remote add fork git@example.com:fork/repo.git");
+  pkg::exec(d.path_, "git update-ref refs/remotes/fork/release {}", a);
+  pkg::exec(d.path_, "git branch -q --track release fork/release");
+  d.commit_ = remote_head(a, "release");
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "HEAD");
+  CHECK(pkg::get_commit(d.path_, "release") == a);
+
   fs::remove_all(dir);
 }
