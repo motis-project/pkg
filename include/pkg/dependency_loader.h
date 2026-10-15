@@ -27,22 +27,18 @@ public:
       iteration_fn_t const& = [](dep*, branch_commit const&) {},
       bool recursive = false);
 
-  dep* root() const;
-  std::vector<dep*> sorted() const;
+  dep* root();
+  std::vector<dep*> sorted();
   std::vector<dep*> get_all() const;
   std::optional<dep*> resolve(std::string const& url) const;
 
 private:
-  void retrieve(dep* pred, iteration_fn_t const&, bool recursive);
+  void retrieve(dep* pred, iteration_fn_t const&, bool recursive,
+                std::map<std::string, std::string> const& pinned_urls);
 
   boost::filesystem::path deps_root_;
-
-  // One dep per directory (URLs with the same name share it), keyed by name.
   std::map<std::string, dep*> deps_;
   std::vector<std::unique_ptr<dep>> dep_mem_;
-
-  // URLs from the root's .pkg by name, they win over other references.
-  std::map<std::string, std::string> root_urls_;
 };
 
 }  // namespace pkg

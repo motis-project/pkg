@@ -22,13 +22,13 @@ dependency_loader::dependency_loader(fs::path deps_root)
 
 dependency_loader::~dependency_loader() = default;
 
-dep* dependency_loader::root() const { return deps_.at(ROOT); }
+dep* dependency_loader::root() { return deps_.at(ROOT); }
 
 std::optional<dep*> dependency_loader::resolve(std::string const& url) const {
   return utl::lookup(deps_, name_from_url(url));
 }
 
-std::vector<dep*> dependency_loader::sorted() const {
+std::vector<dep*> dependency_loader::sorted() {
   auto written = std::set<dep*>{};
   auto sorted = std::vector<dep*>{};
   auto all = get_all();
@@ -60,23 +60,24 @@ void dependency_loader::retrieve(
   deps_.clear();
   dep_mem_.clear();
   auto& d = dep_mem_.emplace_back(std::make_unique<dep>(dep::root(p)));
-  deps_[ROOT] = d.get();
 
-  root_urls_.clear();
+  auto pinned_urls = std::map<std::string, std::string>{};
   for (auto const& r : read_deps(deps_root_, d.get(), recursive)) {
-    root_urls_.emplace(r.name(), r.url_);
+    pinned_urls.emplace(r.name(), r.url_);
   }
 
-  retrieve(d.get(), iterate, recursive);
+  retrieve(deps_[ROOT] = d.get(), iterate, recursive, pinned_urls);
 }
 
 void dependency_loader::retrieve(
     dep* pred, dependency_loader::iteration_fn_t const& iterate,
-    bool const recursive) {
+    bool const recursive,
+    std::map<std::string, std::string> const& pinned_urls) {
   for (auto const& d : read_deps(deps_root_, pred, recursive)) {
     auto succ = utl::get_or_create(deps_, d.name(), [&]() {
       auto& created = dep_mem_.emplace_back(std::make_unique<dep>(d));
-      if (auto const url = root_urls_.find(d.name()); url != end(root_urls_)) {
+      if (auto const url = pinned_urls.find(d.name());
+          url != end(pinned_urls)) {
         created->url_ = url->second;
       }
       return created.get();
@@ -89,7 +90,7 @@ void dependency_loader::retrieve(
     pred->succs_.insert(succ);
 
     iterate(succ, bc);
-    retrieve(succ, iterate, recursive);
+    retrieve(succ, iterate, recursive, pinned_urls);
   }
 }
 
