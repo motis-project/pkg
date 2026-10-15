@@ -28,28 +28,40 @@ TEST_CASE("git_attach") {
     return out.substr(0, out.find('\n'));
   };
 
-  // master: a -> b, feature/a: a
+  // master: a -> b, feature/a: a, dev: b
   pkg::exec(d.path_, "git init -q -b master");
   auto const a = commit("a");
   auto const b = commit("b");
   pkg::exec(d.path_, "git branch feature/a {}", a);
+  pkg::exec(d.path_, "git branch dev {}", b);
   CHECK(pkg::as_branch(d.path_, a) == "feature/a");
   CHECK(pkg::as_branch(d.path_, b) == "master");
 
   auto e = pkg::executor{};
-  d.commit_ = a;
 
   // without force: checks out the branch at the commit
+  d.commit_ = a;
   pkg::git_attach(e, &d, false);
   CHECK(pkg::get_commit(d.path_) == a);
   CHECK(head_branch() == "feature/a");
 
+  // master is preferred when coming from another commit
+  d.commit_ = b;
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "master");
+
+  // a checked out branch at the commit stays
+  pkg::exec(d.path_, "git checkout -q dev");
+  pkg::git_attach(e, &d, false);
+  CHECK(head_branch() == "dev");
+
   // with force: detaches, the branches stay where they are
-  pkg::exec(d.path_, "git checkout -q master");
+  d.commit_ = a;
   pkg::git_attach(e, &d, true);
   CHECK(pkg::get_commit(d.path_) == a);
   CHECK(head_branch() == "HEAD");
   CHECK(pkg::get_commit(d.path_, "master") == b);
+  CHECK(pkg::get_commit(d.path_, "dev") == b);
 
   // no branch at the commit
   CHECK(!pkg::as_branch(d.path_, commit("c")).has_value());

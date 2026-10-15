@@ -106,8 +106,16 @@ std::optional<std::string> as_branch(executor& e,
                           "--format=%(refname:short) refs/heads",
                           commit)
                        .out_;
-  auto const branch = utl::get_line(out);
-  return branch.len == 0 ? std::nullopt : std::optional{branch.to_str()};
+  auto branch = std::optional<std::string>{};
+  for (auto const line : utl::lines{out}) {
+    if (line.view() == "master") {
+      return "master";
+    }
+    if (!branch.has_value()) {
+      branch = line.to_str();
+    }
+  }
+  return branch;
 }
 
 std::optional<std::string> as_branch(boost::filesystem::path const& p,
