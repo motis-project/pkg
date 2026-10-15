@@ -31,6 +31,8 @@ TEST_CASE("get_remote") {
   exec(test_repo, "git remote add remoteD ssh://git@github.com:baz/baz.git");
   exec(test_repo, "git remote add remoteE git@github.com:zab/zab.git");
   exec(test_repo, "git remote set-url --push remoteE read-only");
+  exec(test_repo, "git remote add remoteF https://github.com/qux/qux");
+  exec(test_repo, "git remote add backup git@github.com:foo/foo.git.bak");
 
   auto e = pkg::executor{};
   CHECK("remoteA" == get_remote(e, test_repo, "git@github.com:bar/bar.git"));
@@ -39,6 +41,12 @@ TEST_CASE("get_remote") {
   CHECK("origin" == get_remote(e, test_repo, "git@github.com:oof/oof.git"));
   CHECK("remoteE" == get_remote(e, test_repo, "git@github.com:zab/zab.git"));
   CHECK("origin" == get_remote(e, test_repo, "read-only"));
+
+  // the same repository in another protocol, without .git
+  CHECK("remoteF" == get_remote(e, test_repo, "git@github.com:qux/qux.git"));
+
+  // no substring matches: foo.git.bak is another repository
+  CHECK("origin" == get_remote(e, test_repo, "git@github.com:foo/foo.git"));
 
   fs::remove_all(test_repo);
 }

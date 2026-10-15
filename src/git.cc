@@ -69,21 +69,27 @@ std::string git_shorten(dep const* d, std::string const& commit) {
   return out;
 }
 
+// Any form of a repository URL, with or without .git, becomes https://host/path
+std::string normalize_repo_url(utl::cstr const url) {
+  auto normalized = url_to_protocol(url.trim().to_str(), protocol::kHttps);
+  if (normalized.ends_with(".git")) {
+    normalized.resize(normalized.size() - 4);
+  }
+  return normalized;
+}
+
 std::string get_remote(executor& e, boost::filesystem::path const& p,
                        std::string const& url) {
-  auto const out = e.exec(p, "git remote").out_;
-  std::string remote{"origin"};
-  utl::skip_lines(out, [&](utl::cstr s) {
-    auto remote_url = exec(p, "git remote get-url {}", s.to_str()).out_;
-    if (remote_url.contains(url) || url.contains(remote_url)) {
-      remote = s.to_str();
-      return false;
+  auto const normalized_url = normalize_repo_url(url);
+  auto const remotes = e.exec(p, "git remote").out_;
+  for (auto const line : utl::lines{remotes}) {
+    auto const name = line.trim().to_str();
+    auto const remote_url = e.exec(p, "git remote get-url {}", name).out_;
+    if (normalize_repo_url(remote_url) == normalized_url) {
+      return name;
     }
-
-    return true;
-  });
-
-  return remote;
+  }
+  return "origin";
 }
 
 std::string get_commit(executor& e, boost::filesystem::path const& p,
