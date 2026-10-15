@@ -4,7 +4,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <queue>
 #include <set>
 #include <string>
 #include <vector>
@@ -31,35 +30,19 @@ public:
   dep* root() const;
   std::vector<dep*> sorted() const;
   std::vector<dep*> get_all() const;
-  auto get_unique_paths() const {
-    return get_uniques(
-        [](dep* const a, dep* const b) -> bool { return a->path_ < b->path_; });
-  }
   std::optional<dep*> resolve(std::string const& url) const;
 
 private:
   void retrieve(dep* pred, iteration_fn_t const&, bool recursive);
 
-  template <typename Fn>
-  std::set<dep*, Fn> get_uniques(Fn&& comp) const {
-    auto uniques = std::set<dep*, Fn>{comp};
-    auto q = std::queue<dep*>{};
-    q.push(deps_.at(ROOT));
-    while (!q.empty()) {
-      auto const d = q.front();
-      uniques.insert(d);
-      q.pop();
-      for (auto const succ : d->succs_) {
-        q.push(succ);
-      }
-    }
-
-    return uniques;
-  }
-
   boost::filesystem::path deps_root_;
+
+  // One dep per directory (URLs with the same name share it), keyed by name.
   std::map<std::string, dep*> deps_;
   std::vector<std::unique_ptr<dep>> dep_mem_;
+
+  // URLs from the root's .pkg by name, they win over other references.
+  std::map<std::string, std::string> root_urls_;
 };
 
 }  // namespace pkg

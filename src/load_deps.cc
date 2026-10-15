@@ -145,7 +145,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   do {
     repeat = false;
     l.retrieve(repo, iterator, recursive);
-    for (auto const& d : l.get_unique_paths()) {
+    for (auto const& d : l.get_all()) {
       if (d->url_ == ROOT || d->commit_ == get_commit(d->path_)) {
         continue;
       }
