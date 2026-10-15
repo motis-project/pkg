@@ -2,7 +2,10 @@
 
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <mutex>
+#include <sstream>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -25,6 +28,26 @@
 namespace fs = boost::filesystem;
 
 namespace pkg {
+
+void write_cmake_lists(fs::path const& deps_root,
+                       std::vector<std::string> const& deps) {
+  auto content = std::stringstream{};
+  content << "cmake_minimum_required(VERSION 3.10)\n"
+          << "project(" + deps_root.string() << ")\n\n";
+  for (auto const& d : deps) {
+    content << "add_subdirectory(" << d << " EXCLUDE_FROM_ALL)\n";
+  }
+
+  auto const path = (deps_root / "CMakeLists.txt").generic_string();
+  {
+    auto in = std::ifstream{path};
+    if (std::string{std::istreambuf_iterator<char>{in},
+                    std::istreambuf_iterator<char>{}} == content.str()) {
+      return;
+    }
+  }
+  std::ofstream{path} << content.str();
+}
 
 void load_deps(fs::path const& repo, fs::path const& deps_root,
                bool const clone_https, bool const force, bool const recursive) {
@@ -119,6 +142,7 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
     auto lock_hash = cista::hash_t{};
     f >> lock_hash;
 
+    auto lock_deps = std::vector<std::string>{};
     auto const check_lock_file = [&]() {
       auto dep = std::string{};
       auto commit = std::string{};
@@ -128,11 +152,13 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
         if (get_commit(deps_root / dep) != commit) {
           return false;
         }
+        lock_deps.emplace_back(dep);
       }
       return true;
     };
 
     if (lock_hash == hash && check_lock_file()) {
+      write_cmake_lists(deps_root, lock_deps);
       return;
     }
   } catch (std::exception const& e) {
@@ -176,15 +202,13 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
   } while (repeat);
 
   {
-    std::ofstream of{(deps_root / "CMakeLists.txt").generic_string().c_str()};
-    of << "cmake_minimum_required(VERSION 3.10)\n"
-       << "project(" + deps_root.string() << ")\n\n";
+    auto deps = std::vector<std::string>{};
     for (auto const& v : l.sorted()) {
-      if (v->url_ == ROOT) {
-        continue;
+      if (v->url_ != ROOT) {
+        deps.emplace_back(v->name());
       }
-      of << "add_subdirectory(" << v->name() << " EXCLUDE_FROM_ALL)\n";
     }
+    write_cmake_lists(deps_root, deps);
   }
 
   {
