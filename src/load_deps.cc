@@ -59,16 +59,18 @@ void load_deps(fs::path const& repo, fs::path const& deps_root,
         // Fetch if commit is not known.
         if (!commit_exists(d, commit)) {
           auto const remote = get_remote(e, d->path_, d->url_);
+          fmt::print("{} ({}): fetch\n", d->name(), remote);
+
+          std::cout << std::flush;
           e.exec(d->path_, "git remote set-url {} {}", remote,
                  url_to_protocol(
                      d->url_, clone_https ? protocol::kHttps : protocol::kSsh));
-          fmt::print("{} ({}): fetch\n", d->name(), remote);
-          e.exec(d->path_, "git fetch {}", remote);
           if (clone_https) {
             // Push needs to use ssh even with http
             e.exec(d->path_, "git remote set-url --push {} {}", remote,
                    url_to_protocol(d->url_, protocol::kSsh));
           }
+          e.exec(d->path_, "git fetch {}", remote);
         }
 
         // Select latest known commit.

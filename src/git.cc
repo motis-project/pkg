@@ -1,12 +1,9 @@
 #include "pkg/git.h"
 
-#include <algorithm>
-
 #include "boost/filesystem.hpp"
 
 #include "utl/erase.h"
 #include "utl/parser/cstr.h"
-#include "utl/to_vec.h"
 
 #include "pkg/exec.h"
 
@@ -133,13 +130,12 @@ void git_attach(executor& e, dep const* d, bool const force) {
     e.exec(d->path_, "git fetch {}", get_remote(e, d->path_, d->url_));
   }
 
-  auto const branch = as_branch(e, d->path_, d->commit_);
-  auto const target = branch.has_value() ? branch.value() : d->commit_;
   if (force) {
     e.exec(d->path_, "git checkout --detach");
-    e.exec(d->path_, "git reset --hard {}", target);
+    e.exec(d->path_, "git reset --hard {}", d->commit_);
   } else {
-    e.exec(d->path_, "git checkout {}", target);
+    e.exec(d->path_, "git checkout {}",
+           as_branch(e, d->path_, d->commit_).value_or(d->commit_));
   }
 
   if (boost::filesystem::exists(d->path_ / ".gitmodules")) {
@@ -164,35 +160,10 @@ void git_clone(executor& e, dep const* d, bool const to_https) {
   e.exec(d->path_, "git submodule update --init --recursive");
 }
 
-void git_attach(dep const* d, bool const force) {
-  auto e = executor{};
-  git_attach(e, d, force);
-}
-
 std::string get_commit(boost::filesystem::path const& p,
                        std::string const& target) {
   auto e = executor{};
   return get_commit(e, p, target);
-}
-
-std::string commit(boost::filesystem::path const& p, std::string const& msg) {
-  constexpr auto const PKG_FILE = ".pkg";
-  exec(p, "git add {}", PKG_FILE);
-  exec(p, "git commit -m \"{}\"", msg);
-  return get_commit(p);
-}
-
-void push(boost::filesystem::path const& p) { exec(p, "git push"); }
-
-std::vector<commit_info> get_commit_infos(
-    boost::filesystem::path const& p, std::set<std::string> const& commits) {
-  auto infos = utl::to_vec(commits, [&](auto&& c) -> commit_info {
-    auto info = exec(p, "git show -s --format=%at {}", c).out_;
-    info.resize(info.size() - 1);
-    return {info, c};
-  });
-  std::sort(begin(infos), end(infos), std::greater<>());
-  return infos;
 }
 
 bool commit_exists(dep const* d, std::string const& commit) {
@@ -217,12 +188,6 @@ std::time_t commit_time(dep const* d, std::string const& commit) {
       exec(d->path_, "git show -s --date=local --format=%at {}", commit).out_;
   info.resize(info.size() - 1);
   return std::stol(info);
-}
-
-bool is_fast_forward(boost::filesystem::path const& p,
-                     std::string const& commit1, std::string const& commit2) {
-  return exec(p, "git merge-base --is-ancestor {} {}", commit1, commit2)
-             .exit_code_ == 0;
 }
 
 }  // namespace pkg

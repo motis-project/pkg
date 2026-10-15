@@ -1,10 +1,7 @@
 #pragma once
 
 #include <optional>
-#include <set>
 #include <string>
-
-#include "cista/reflection/comparable.h"
 
 #include "boost/filesystem/path.hpp"
 
@@ -12,12 +9,6 @@
 #include "pkg/exec.h"
 
 namespace pkg {
-
-struct commit_info {
-  CISTA_COMPARABLE()
-  std::string info_;
-  std::string commit_;
-};
 
 enum protocol { kSsh, kHttps };
 
@@ -38,20 +29,10 @@ std::string get_remote(executor&, boost::filesystem::path const& p,
 std::string get_commit(boost::filesystem::path const& p,
                        std::string const& target = "HEAD");
 
-std::string commit(boost::filesystem::path const& p, std::string const& msg);
-
-void push(boost::filesystem::path const& p);
-
-std::vector<commit_info> get_commit_infos(boost::filesystem::path const& p,
-                                          std::set<std::string> const& commits);
-
 bool commit_exists(dep const*, std::string const& commit);
 
 std::string commit_date(dep const*, std::string const& commit);
 
 std::time_t commit_time(dep const*, std::string const& commit);
-
-bool is_fast_forward(boost::filesystem::path const& p,
-                     std::string const& commit1, std::string const& commit2);
 
 }  // namespace pkg

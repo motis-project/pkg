@@ -71,7 +71,7 @@ void print_status(fs::path const& repo, fs::path const& deps_root) {
         fmt::print("    commit={}", git_shorten(d, commit));
         if (auto const branch = as_branch(d->path_, commit);
             branch.has_value()) {
-          fmt::print(", branch={}", branch.value());
+          fmt::print(", branch={}", *branch);
         }
         fmt::print(" ({}), referenced by ", commit_date(d, commit));
         for (auto const& p : preds) {

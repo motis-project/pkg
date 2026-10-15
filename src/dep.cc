@@ -34,10 +34,6 @@ std::set<dep*> dep::recursive_preds() const {
   return deps;
 }
 
-bool dep::is_root() const { return url_ == ROOT; }
-
-boost::filesystem::path dep::pkg_file() const { return path_ / PKG_FILE; }
-
 std::string dep::name() const { return name_from_url(url_); }
 
 }  // namespace pkg

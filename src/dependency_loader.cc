@@ -22,8 +22,6 @@ dependency_loader::dependency_loader(fs::path deps_root)
 
 dependency_loader::~dependency_loader() = default;
 
-dep* dependency_loader::root() { return deps_.at(ROOT); }
-
 std::optional<dep*> dependency_loader::resolve(std::string const& url) const {
   return utl::lookup(deps_, name_from_url(url));
 }

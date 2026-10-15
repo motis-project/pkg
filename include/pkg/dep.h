@@ -17,16 +17,7 @@ struct dep {
   dep(boost::filesystem::path const& deps_root, std::string url,
       std::string commit);
 
-  // For compatibility with old .pkg files
-  dep(boost::filesystem::path const& deps_root, std::string url,
-      std::string commit, std::string branch)
-      : dep(deps_root, url, commit) {}
-
   static dep root(boost::filesystem::path const& root_repo);
-
-  bool is_root() const;
-
-  boost::filesystem::path pkg_file() const;
 
   std::string name() const;
 

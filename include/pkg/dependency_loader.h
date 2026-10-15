@@ -16,7 +16,6 @@ namespace pkg {
 struct dependency_loader {
 public:
   using iteration_fn_t = std::function<void(dep*, std::string const&)>;
-  using async_iteration_fn_t = std::function<void(dep*, iteration_fn_t)>;
 
   explicit dependency_loader(boost::filesystem::path deps_root);
   ~dependency_loader();
@@ -26,7 +25,6 @@ public:
       iteration_fn_t const& = [](dep*, std::string const&) {},
       bool recursive = false);
 
-  dep* root();
   std::vector<dep*> sorted();
   std::vector<dep*> get_all() const;
   std::optional<dep*> resolve(std::string const& url) const;
