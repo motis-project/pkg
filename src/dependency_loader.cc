@@ -1,11 +1,16 @@
 #include "pkg/dependency_loader.h"
 
-#include <set>
+#include <algorithm>
+#include <utility>
+
+#include "boost/filesystem/path.hpp"
 
 #include "utl/get_or_create.h"
+#include "utl/lookup.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "pkg/name_from_url.h"
 #include "pkg/read_deps.h"
 
 namespace fs = boost::filesystem;
@@ -20,11 +25,7 @@ dependency_loader::~dependency_loader() = default;
 dep* dependency_loader::root() { return deps_.at(ROOT); }
 
 std::optional<dep*> dependency_loader::resolve(std::string const& url) const {
-  if (auto it = deps_.find(url); it == end(deps_)) {
-    return std::nullopt;
-  } else {
-    return std::make_optional(it->second);
-  }
+  return utl::lookup(deps_, name_from_url(url));
 }
 
 std::vector<dep*> dependency_loader::sorted() {
@@ -59,15 +60,27 @@ void dependency_loader::retrieve(
   deps_.clear();
   dep_mem_.clear();
   auto& d = dep_mem_.emplace_back(std::make_unique<dep>(dep::root(p)));
-  retrieve(deps_[ROOT] = d.get(), iterate, recursive);
+
+  auto pinned_urls = std::map<std::string, std::string>{};
+  for (auto const& r : read_deps(deps_root_, d.get(), recursive)) {
+    pinned_urls.emplace(r.name(), r.url_);
+  }
+
+  retrieve(deps_[ROOT] = d.get(), iterate, recursive, pinned_urls);
 }
 
 void dependency_loader::retrieve(
     dep* pred, dependency_loader::iteration_fn_t const& iterate,
-    bool const recursive) {
+    bool const recursive,
+    std::map<std::string, std::string> const& pinned_urls) {
   for (auto const& d : read_deps(deps_root_, pred, recursive)) {
-    auto succ = utl::get_or_create(deps_, d.url_, [&]() {
-      return dep_mem_.emplace_back(std::make_unique<dep>(d)).get();
+    auto succ = utl::get_or_create(deps_, d.name(), [&]() {
+      auto& created = dep_mem_.emplace_back(std::make_unique<dep>(d));
+      if (auto const url = pinned_urls.find(d.name());
+          url != end(pinned_urls)) {
+        created->url_ = url->second;
+      }
+      return created.get();
     });
 
     succ->referenced_commits_[d.commit_].emplace(pred);
@@ -76,7 +89,7 @@ void dependency_loader::retrieve(
     pred->succs_.insert(succ);
 
     iterate(succ, d.commit_);
-    retrieve(succ, iterate, recursive);
+    retrieve(succ, iterate, recursive, pinned_urls);
   }
 }
 
