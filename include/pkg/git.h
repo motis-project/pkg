@@ -23,6 +23,10 @@ std::optional<std::string> as_branch(boost::filesystem::path const&,
 
 void git_attach(executor&, dep const*, bool force);
 
+bool is_clean(boost::filesystem::path const&);
+
+void discard_changes(executor&, dep const*);
+
 std::string get_remote(executor&, boost::filesystem::path const& p,
                        std::string const& url);
 
